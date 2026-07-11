@@ -1,0 +1,88 @@
+// 進捗計算 & 診断ロジック
+
+import { daysUntil, daysBetween, todayStr } from './utils.js';
+import { REVIEW_THRESHOLD_PCT, REVIEW_INTERVAL_DAYS } from './config.js';
+
+// 完了タスク数と進捗率
+export function computeProgress(rm){
+  let total = 0, done = 0;
+  rm.phases.forEach(p => p.tasks.forEach(t => {
+    total++; if(t.done) done++;
+  }));
+  return {
+    total,
+    done,
+    pct: total ? Math.round((done / total) * 100) : 0
+  };
+}
+
+// 想定進捗率 = 経過日数 / 全期間
+export function computeExpectedProgress(rm){
+  if(!rm.createdAt || !rm.examDate) return null;
+  const total = daysBetween(rm.createdAt, rm.examDate);
+  const elapsed = daysBetween(rm.createdAt, todayStr());
+  if(total == null || total <= 0) return null;
+  const pct = Math.round((elapsed / total) * 100);
+  return Math.max(0, Math.min(100, pct));
+}
+
+// 診断: 想定進捗 vs 実進捗
+// 戻り値: { expectedPct, actualPct, delta, status: 'behind'|'ahead'|'on_track', daysLeft }
+export function diagnose(rm){
+  const actual = computeProgress(rm).pct;
+  const expected = computeExpectedProgress(rm);
+  const daysLeft = daysUntil(rm.examDate);
+
+  if(expected == null){
+    return { expectedPct: null, actualPct: actual, delta: 0, status: 'on_track', daysLeft };
+  }
+
+  const delta = actual - expected; // 正なら先行、負なら遅れ
+  let status = 'on_track';
+  if(delta <= -REVIEW_THRESHOLD_PCT) status = 'behind';
+  else if(delta >= REVIEW_THRESHOLD_PCT) status = 'ahead';
+
+  return { expectedPct: expected, actualPct: actual, delta, status, daysLeft };
+}
+
+// レビューを提案すべきかどうか
+// - 定期タイミング（前回レビューから REVIEW_INTERVAL_DAYS 経過）
+// - または進捗差が閾値を超えている
+export function shouldSuggestReview(rm){
+  if(!rm) return false;
+  const diag = diagnose(rm);
+  if(diag.status !== 'on_track') return true;
+
+  if(!rm.lastReviewedAt) return true;
+  const sinceReview = daysBetween(rm.lastReviewedAt, todayStr());
+  return sinceReview != null && sinceReview >= REVIEW_INTERVAL_DAYS;
+}
+
+// 診断メッセージ生成
+export function diagnosisText(diag){
+  if(diag.expectedPct == null){
+    return `現在の達成率は ${diag.actualPct}% です。`;
+  }
+  const abs = Math.abs(diag.delta);
+  if(diag.status === 'behind'){
+    return `想定より約 ${abs}% 遅れています（想定 ${diag.expectedPct}% / 実際 ${diag.actualPct}%）。試験日まで残り ${diag.daysLeft ?? '—'} 日です。`;
+  }
+  if(diag.status === 'ahead'){
+    return `想定より約 ${abs}% 先行しています（想定 ${diag.expectedPct}% / 実際 ${diag.actualPct}%）。余裕を活かして応用や過去問演習を強化する余地があります。`;
+  }
+  return `想定進捗に沿っています（想定 ${diag.expectedPct}% / 実際 ${diag.actualPct}%）。`;
+}
+
+// 今日おすすめの未完了タスク（各フェーズの先頭から少しずつ）
+export function pickTodaysTasks(rm, max = 3){
+  const undone = [];
+  for(const p of rm.phases){
+    for(const t of p.tasks){
+      if(!t.done){
+        undone.push({ phase: p.name, text: t.text });
+        if(undone.length >= max) return undone;
+      }
+    }
+  }
+  return undone;
+}
