@@ -1,9 +1,9 @@
-// Claude API 呼び出し / プロンプト
+// Gemini API 呼び出し / プロンプト
 
-import { CLAUDE_MODEL } from './config.js';
+import { GEMINI_MODEL } from './config.js';
 import { todayStr } from './utils.js';
 
-const API_URL = 'https://api.anthropic.com/v1/messages';
+const API_URL = '/api/gemini';
 
 // -------- プロンプト生成 --------
 
@@ -128,16 +128,14 @@ export async function generateRoadmap(form){
   }];
 
   const body = {
-    model: CLAUDE_MODEL,
+    model: GEMINI_MODEL,
     max_tokens: 4000,
     system: SYSTEM_GENERATE,
     messages,
-    tools: [
-      { type: 'web_search_20250305', name: 'web_search' }
-    ]
+    tools: []
   };
 
-  const parsed = await callClaudeAndParse(body);
+  const parsed = await callAiAndParse(body);
 
   return {
     overview: parsed.overview || '',
@@ -186,14 +184,14 @@ export async function verifyInformation(rm){
 }`;
 
   const body = {
-    model: CLAUDE_MODEL,
+    model: GEMINI_MODEL,
     max_tokens: 2500,
     system: 'あなたは大学院入試情報の調査エージェントです。web_searchで公式サイトを確認し、事実ベースで報告してください。推測は避け、確認できないものはunclearとしてください。',
     messages: [{ role: 'user', content: userContent }],
-    tools: [{ type: 'web_search_20250305', name: 'web_search' }]
+    tools: []
   };
 
-  return await callClaudeAndParse(body);
+  return await callAiAndParse(body);
 }
 
 // -------- ロードマップ調整 --------
@@ -221,13 +219,13 @@ export async function adjustRoadmap(roadmap, diagnosis){
 ${JSON.stringify(context, null, 2)}`;
 
   const body = {
-    model: CLAUDE_MODEL,
+    model: GEMINI_MODEL,
     max_tokens: 4000,
     system: SYSTEM_ADJUST,
     messages: [{ role: 'user', content: userContent }]
   };
 
-  const parsed = await callClaudeAndParse(body);
+  const parsed = await callAiAndParse(body);
 
   // 完了済みタスクは可能な限り維持（テキスト一致で紐付け）
   const doneTexts = new Set();
@@ -249,15 +247,27 @@ ${JSON.stringify(context, null, 2)}`;
 
 // -------- 内部ヘルパー --------
 
-async function callClaudeAndParse(body){
-  const response = await fetch(API_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  });
+async function callAiAndParse(body){
+  let response;
+  try {
+    response = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+  } catch(e){
+    throw new Error('API proxy is not reachable. Start the local server with GEMINI_API_KEY set.');
+  }
 
   if(!response.ok){
-    throw new Error(`API呼び出しに失敗しました (${response.status})`);
+    let detail = '';
+    try {
+      const errorBody = await response.json();
+      detail = formatApiError(errorBody);
+    } catch(_) {
+      detail = await response.text().catch(() => '');
+    }
+    throw new Error(`API call failed (${response.status})${detail ? ': ' + detail : ''}`);
   }
 
   const data = await response.json();
@@ -283,6 +293,20 @@ async function callClaudeAndParse(body){
     }
     throw new Error('応答の解析に失敗しました');
   }
+}
+
+function formatApiError(errorBody){
+  if(!errorBody) return '';
+  if(typeof errorBody === 'string') return errorBody;
+  if(typeof errorBody.message === 'string') return errorBody.message;
+  if(errorBody.error){
+    if(typeof errorBody.error === 'string') return errorBody.error;
+    if(typeof errorBody.error.message === 'string') return errorBody.error.message;
+    try { return JSON.stringify(errorBody.error); }
+    catch(_) { return String(errorBody.error); }
+  }
+  try { return JSON.stringify(errorBody); }
+  catch(_) { return String(errorBody); }
 }
 
 function normalizePhases(phases){

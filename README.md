@@ -9,7 +9,7 @@
 |------|---------|---------|
 | 入力・条件の編集 | 🖉 `📝 入力を編集して再生成` ボタン | 元の入力が復元された編集フォームで再生成。完了済みタスクは可能な限り引き継がれる |
 | プロンプトの調整（追加指示） | フォーム内 `🎛 AIへの追加指示` セクション | 「数学に70%の時間を」等の指示を追記でき、`system prompt`に「最優先で反映」として渡される |
-| Web情報の確認 | `🔍 Web情報を再確認` ボタン | Claudeが`web_search`ツールで公式サイトを再照会し、`confirmed / changed / unclear` の3段階で報告 |
+| Web情報の確認 | `🔍 Web情報を再確認` ボタン | Gemini APIで情報確認用の回答を生成し、`confirmed / changed / unclear` の3段階で報告 |
 | 参照ソース表示 | ロードマップ上部の`📎 Web参照情報` | 生成時に参照したURLと最終確認日を常時表示 |
 
 ### 進捗修正機能
@@ -40,7 +40,7 @@ inshi-roadmap/
     ├── config.js            定数
     ├── utils.js             エスケープ / 日付 / トースト
     ├── storage.js           永続化 (window.storage / localStorage)
-    ├── api.js               Claude API + プロンプト
+    ├── api.js               Gemini API + プロンプト
     │                        - generateRoadmap    新規生成 (web_search有効)
     │                        - adjustRoadmap      Case2の再構築
     │                        - verifyInformation  Web情報の再検証
