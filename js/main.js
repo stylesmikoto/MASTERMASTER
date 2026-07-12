@@ -3,7 +3,7 @@
 import { STORAGE_KEY, SETTINGS_KEY } from './config.js';
 import { loadJSON, saveJSON } from './storage.js';
 import { showToast, todayStr } from './utils.js';
-import { generateRoadmap, adjustRoadmap, verifyInformation } from './api.js';
+import { generateRoadmap, adjustRoadmap, verifyInformation, explainTask } from './api.js';
 import {
   scheduleReminder,
   checkStartupReminder,
@@ -428,6 +428,13 @@ const roadmapActions = {
     await persist();
     render();
     showToast({ title: 'タスクを追加しました', body: text, type: 'info', duration: 2500 });
+  },
+  onExplainTask: async (taskText) => {
+    try {
+      return await explainTask(state.roadmap, taskText);
+    } catch(e){
+      throw new Error(e?.message || 'タスクの詳細取得に失敗しました');
+    }
   },
   onReminderChange: async ({ enabled, time }) => {
     if(enabled && (!state.settings.reminder.enabled || state.settings.reminder.time !== time)){
