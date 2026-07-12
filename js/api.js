@@ -111,6 +111,9 @@ ${TASK_GRANULARITY_RULES}
 {
   "overview": "全体の学習方針を2〜3文で要約した文章。Web検索で得た情報があればそれを反映する",
   "sources": ["参照した公式サイト等のURL（あれば）"],
+  "subjectProgress": [
+    {"subject": "情報理論", "progress": 30, "note": "今は基礎概念の理解が進んでいる状態"}
+  ],
   "phases": [
     {
       "name": "フェーズ名（例：基礎固め期）",
@@ -126,6 +129,7 @@ ${TASK_GRANULARITY_RULES}
 - 各フェーズのタスクは3〜7個とし、すべて上記の「タスクの粒度」を満たす
 - 過去問の傾向・作問者の情報・目標点数があれば優先順位に反映する
 - 苦手科目や使える時間などの自由記述があれば配分に反映する
+- 主要科目ごとに、subjectProgress に 0〜100 の整数で進捗率を付け、必要に応じて note で簡潔な状態を説明する
 - 最後のフェーズは試験直前期（総仕上げ・過去問演習・体調管理など）にする
 - 添付資料（過去問PDF等）があれば内容を精読し、タスクに具体的に反映する`;
 
@@ -145,6 +149,9 @@ ${TASK_GRANULARITY_RULES}
 {
   "overview": "調整後の学習方針を2〜3文で要約",
   "diagnosis": "現状分析を2〜3文（何が遅れているか / 順調な点 / リスク）",
+  "subjectProgress": [
+    {"subject": "情報理論", "progress": 30, "note": "基礎理解は進んでいる"}
+  ],
   "phases": [
     {
       "name": "フェーズ名",
@@ -161,7 +168,8 @@ ${TASK_GRANULARITY_RULES}
 - 進んでいる場合は補強タスクや過去問演習を追加してもよい
 - フェーズの期間は今日〜試験日で再割り当てする
 - 過度に非現実的なペースを課さない
-- 新規・継続を問わず、未完了タスクはすべて上記の「タスクの粒度」を満たすよう必要に応じて分割・具体化する`;
+- 新規・継続を問わず、未完了タスクはすべて上記の「タスクの粒度」を満たすよう必要に応じて分割・具体化する
+- subjectProgress も現状の学習状態に合わせて更新する`;
 
 // -------- 添付ファイルをmessages contentに変換 --------
 
@@ -207,6 +215,7 @@ export async function generateRoadmap(form){
 
   const parsed = await callAiAndParse(body);
   const phases = normalizePhases(parsed.phases);
+  const subjectProgress = normalizeSubjectProgress(parsed.subjectProgress, phases);
   if(!phases.length){
     throw new Error('AIの応答にロードマップのphasesが含まれていませんでした。もう一度作成してください。');
   }
@@ -214,6 +223,7 @@ export async function generateRoadmap(form){
   return {
     overview: parsed.overview || '',
     sources: parsed.sources || [],
+    subjectProgress,
     university: form.university,
     target: form.target,
     examDate: form.examDate,
@@ -313,11 +323,13 @@ ${JSON.stringify(context, null, 2)}`;
     ...p,
     tasks: p.tasks.map(t => ({ ...t, done: doneTexts.has(t.text) }))
   }));
+  const subjectProgress = normalizeSubjectProgress(parsed.subjectProgress || roadmap.subjectProgress, newPhases);
 
   return {
     ...roadmap,
     overview: parsed.overview || roadmap.overview,
     diagnosis: parsed.diagnosis || '',
+    subjectProgress,
     phases: newPhases,
     lastReviewedAt: todayStr()
   };
@@ -432,4 +444,63 @@ function normalizePhases(phases){
       done: false
     }))
   }));
+}
+
+function normalizeSubjectProgress(subjectProgress, phases){
+  if(Array.isArray(subjectProgress) && subjectProgress.length){
+    return subjectProgress
+      .map(item => {
+        const subject = String(item?.subject || item?.name || '').trim();
+        if(!subject) return null;
+        const progressValue = Number(item?.progress);
+        const progress = Number.isFinite(progressValue)
+          ? Math.max(0, Math.min(100, Math.round(progressValue)))
+          : 0;
+        return {
+          subject,
+          progress,
+          note: String(item?.note || '').trim()
+        };
+      })
+      .filter(Boolean);
+  }
+
+  return inferSubjectProgressFromTasks(phases);
+}
+
+function inferSubjectProgressFromTasks(phases){
+  const subjectPatterns = [
+    ['情報理論', /情報理論/u],
+    ['アルゴリズムとデータ構造', /アルゴリズム|データ構造/u],
+    ['基礎数学', /基礎数学|線形代数|微分積分/u],
+    ['情報数学', /情報数学|論理|言語理論|オートマトン/u],
+    ['確率・統計', /確率|統計/u],
+    ['人工知能', /人工知能|機械学習|ニューラル/u],
+    ['コンピュータシステム', /コンピュータシステム|OS|ネットワーク|アーキテクチャ/u],
+    ['応用数学', /応用数学|微分方程式|フーリエ|複素解析/u]
+  ];
+
+  const stats = new Map();
+  for(const phase of phases || []){
+    for(const task of phase.tasks || []){
+      const text = String(task?.text || '');
+      for(const [subject, pattern] of subjectPatterns){
+        if(pattern.test(text)){
+          const entry = stats.get(subject) || { total: 0, done: 0 };
+          entry.total += 1;
+          if(task?.done) entry.done += 1;
+          stats.set(subject, entry);
+          break;
+        }
+      }
+    }
+  }
+
+  return Array.from(stats.entries())
+    .map(([subject, entry]) => ({
+      subject,
+      progress: entry.total ? Math.round((entry.done / entry.total) * 100) : 0,
+      note: ''
+    }))
+    .sort((a, b) => a.subject.localeCompare(b.subject, 'ja'));
 }

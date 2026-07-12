@@ -72,6 +72,7 @@ export function renderRoadmap(app, state, actions){
   const reviewBannerHtml = suggestReview ? renderReviewBanner(diag) : '';
   const todayRecommendation = pickTodayRecommendation(rm);
   const todayRecommendationHtml = renderTodayRecommendation(todayRecommendation);
+  const subjectProgressHtml = renderSubjectProgress(rm.subjectProgress);
 
   const reminderPanelHtml = editMode ? '' : renderReminderPanel(state.settings);
   const sourcesHtml = renderSourcesBlock(rm);
@@ -105,6 +106,7 @@ export function renderRoadmap(app, state, actions){
 
       ${reviewBannerHtml}
       ${todayRecommendationHtml}
+      ${subjectProgressHtml}
 
       <div class="trail">
         <div class="trail-line"></div>
@@ -139,6 +141,34 @@ function renderTodayRecommendation(rec){
       <div style="font-size:11px; font-weight:700; letter-spacing:0.08em; color:#8a4b00; margin-bottom:6px;">TODAY'S RECOMMENDATION</div>
       <div style="font-size:15px; font-weight:700; color:#1f2937;">今日やるなら：${esc(rec.text)}</div>
       <div style="font-size:12px; color:#4b5563; margin-top:4px;">おすすめの場所：${esc(rec.phaseName)}</div>
+    </div>
+  `;
+}
+
+function renderSubjectProgress(subjectProgress){
+  if(!Array.isArray(subjectProgress) || !subjectProgress.length) return '';
+
+  const items = subjectProgress.map(item => {
+    const pct = Math.max(0, Math.min(100, Number(item?.progress) || 0));
+    const note = item?.note ? `<div style="font-size:11px; color:var(--slate); margin-top:2px;">${esc(item.note)}</div>` : '';
+    return `
+      <div style="margin-bottom:10px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:4px;">
+          <div style="font-weight:700; color:var(--ink);">${esc(item.subject || '科目')}</div>
+          <div style="font-size:12px; color:var(--slate);">${pct}%</div>
+        </div>
+        <div style="height:8px; background:#e5e7eb; border-radius:999px; overflow:hidden;">
+          <div style="height:100%; width:${pct}%; background:linear-gradient(90deg, #4f46e5, #7c3aed); border-radius:999px;"></div>
+        </div>
+        ${note}
+      </div>
+    `;
+  }).join('');
+
+  return `
+    <div style="margin:16px 0 8px; padding:14px 16px; border:1px solid #dbeafe; background:#f8fbff; border-radius:12px;">
+      <div style="font-size:11px; font-weight:700; letter-spacing:0.08em; color:#2563eb; margin-bottom:8px;">SUBJECT PROGRESS</div>
+      ${items}
     </div>
   `;
 }
