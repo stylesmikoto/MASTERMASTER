@@ -5,6 +5,22 @@ import { PEAK_SVG, CHECK_SVG } from '../config.js';
 import { computeProgress, diagnose, shouldSuggestReview } from '../progress.js';
 import { isNotificationSupported } from '../reminders.js';
 
+function pickTodayRecommendation(rm){
+  if(!rm?.phases?.length) return null;
+
+  for(const phase of rm.phases){
+    const undoneTask = (phase.tasks || []).find(t => !t.done);
+    if(undoneTask){
+      return {
+        text: undoneTask.text,
+        phaseName: phase.name || 'フェーズ'
+      };
+    }
+  }
+
+  return null;
+}
+
 export function renderRoadmap(app, state, actions){
   const rm = state.roadmap;
   const prog = computeProgress(rm);
@@ -24,7 +40,10 @@ export function renderRoadmap(app, state, actions){
     const tasksHtml = p.tasks.map(t => `
       <div class="task-item ${t.done ? 'done' : ''}" data-task="${esc(t.id)}" data-phase="${pi}">
         <div class="box">${CHECK_SVG}</div>
-        <div class="txt">${esc(t.text)}</div>
+        <div style="display:flex; flex-direction:column; gap:4px; min-width:0;">
+          <div class="txt">${esc(t.text)}</div>
+          ${t.subject ? `<div style="font-size:11px; color:#4f46e5;">#${esc(t.subject)}</div>` : ''}
+        </div>
         ${editMode ? `<button class="task-del" data-del-task="${esc(t.id)}" data-del-phase="${pi}" title="削除">✕</button>` : ''}
       </div>
     `).join('');
@@ -54,6 +73,8 @@ export function renderRoadmap(app, state, actions){
 
   const suggestReview = shouldSuggestReview(rm) && !editMode;
   const reviewBannerHtml = suggestReview ? renderReviewBanner(diag) : '';
+  const todayRecommendation = pickTodayRecommendation(rm);
+  const todayRecommendationHtml = renderTodayRecommendation(todayRecommendation);
 
   const reminderPanelHtml = editMode ? '' : renderReminderPanel(state.settings);
   const sourcesHtml = renderSourcesBlock(rm);
@@ -86,6 +107,7 @@ export function renderRoadmap(app, state, actions){
       </div>
 
       ${reviewBannerHtml}
+      ${todayRecommendationHtml}
 
       <div class="trail">
         <div class="trail-line"></div>
@@ -111,6 +133,17 @@ export function renderRoadmap(app, state, actions){
   `;
 
   bindEvents(app, state, actions, rm);
+}
+
+function renderTodayRecommendation(rec){
+  if(!rec) return '';
+  return `
+    <div style="margin:16px 0 8px; padding:14px 16px; border:1px solid #f2c66d; border-left:4px solid #f2c66d; background:#fff8e8; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+      <div style="font-size:11px; font-weight:700; letter-spacing:0.08em; color:#8a4b00; margin-bottom:6px;">TODAY'S RECOMMENDATION</div>
+      <div style="font-size:15px; font-weight:700; color:#1f2937;">今日やるなら：${esc(rec.text)}</div>
+      <div style="font-size:12px; color:#4b5563; margin-top:4px;">おすすめの場所：${esc(rec.phaseName)}</div>
+    </div>
+  `;
 }
 
 function renderEditModeBar(){

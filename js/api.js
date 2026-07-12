@@ -181,12 +181,15 @@ ${SUBJECT_PRIORITY_RULES}
 {
   "overview": "全体の学習方針を2〜3文で要約した文章。Web検索で得た情報があればそれを反映する",
   "sources": ["参照した公式サイト等のURL（あれば）"],
+  "subjectProgress": [
+    {"subject": "情報理論", "progress": 30, "note": "今は基礎概念の理解が進んでいる状態"}
+  ],
   "phases": [
     {
       "name": "フェーズ名（例：Week1 基礎固め）",
       "period": "期間（例：7/14(月)〜7/20(日)）",
       "goal": "このフェーズで達成すべきことを1文で",
-      "tasks": ["具体的なタスク1", "具体的なタスク2", "具体的なタスク3", "具体的なタスク4", "具体的なタスク5", "具体的なタスク6", "具体的なタスク7"]
+      "tasks": ["具体的なタスク1", "具体的なタスク2", "具体的なタスク3"]
     }
   ]
 }
@@ -197,7 +200,7 @@ ${SUBJECT_PRIORITY_RULES}
 - 上記の「科目・単元の優先順位」に沿ってフェーズ・タスクの順序を決める
 - 過去問の傾向・作問者の情報・目標点数があれば優先順位に反映する
 - 苦手科目や使える時間などの自由記述があれば配分に反映する
-- 試験日を含む最終フェーズは試験直前期（総仕上げ・過去問演習・体調管理など）にする
+- 最後のフェーズは試験直前期（総仕上げ・過去問演習・体調管理など）にする
 - 添付資料（過去問PDF等）があれば内容を精読し、タスクに具体的に反映する`;
 
 // ロードマップ調整用のシステムプロンプト
@@ -218,12 +221,15 @@ ${SUBJECT_PRIORITY_RULES}
 {
   "overview": "調整後の学習方針を2〜3文で要約",
   "diagnosis": "現状分析を2〜3文（何が遅れているか / 順調な点 / リスク）",
+  "subjectProgress": [
+    {"subject": "科目", "progress": 進捗率, "note": "基礎理解は進んでいる"}
+  ],
   "phases": [
     {
       "name": "フェーズ名",
       "period": "期間（例：7/14(月)〜7/20(日)）",
       "goal": "このフェーズの到達目標",
-      "tasks": ["タスク1", "タスク2", "タスク3", "タスク4", "タスク5", "タスク6", "タスク7"]
+      "tasks": ["タスク1", "タスク2"]
     }
   ]
 }
@@ -236,7 +242,9 @@ ${SUBJECT_PRIORITY_RULES}
 - フェーズは今日から試験日までを1週間（7日間）ごとに区切って再割り当てする（最終フェーズは7日未満でもよい）
 - 各フェーズのタスクは必ず7個とする（1週間の7日それぞれに対応する1タスクとして扱う）
 - 過度に非現実的なペースを課さない
-- 新規・継続を問わず、未完了タスクはすべて上記の「タスクの粒度」を満たすよう必要に応じて分割・具体化する`;
+- 新規・継続を問わず、未完了タスクはすべて上記の「タスクの粒度」を満たすよう必要に応じて分割・具体化する
+- subjectProgress も現状の学習状態に合わせて更新する
+- どの科目にも当てはまらないタスクは「その他」にまとめる`;
 
 // -------- 添付ファイルをmessages contentに変換 --------
 
@@ -282,6 +290,7 @@ export async function generateRoadmap(form){
 
   const parsed = await callAiAndParse(body);
   const phases = normalizePhases(parsed.phases);
+  const subjectProgress = normalizeSubjectProgress(parsed.subjectProgress, phases);
   if(!phases.length){
     throw new Error('AIの応答にロードマップのphasesが含まれていませんでした。もう一度作成してください。');
   }
@@ -289,6 +298,7 @@ export async function generateRoadmap(form){
   return {
     overview: parsed.overview || '',
     sources: parsed.sources || [],
+    subjectProgress,
     university: form.university,
     target: form.target,
     examDate: form.examDate,
@@ -442,17 +452,27 @@ ${JSON.stringify(context, null, 2)}`;
 
   // 完了済みタスクは可能な限り維持（テキスト一致で紐付け）
   const doneTexts = new Set();
-  roadmap.phases.forEach(p => p.tasks.forEach(t => { if(t.done) doneTexts.add(t.text); }));
+  const existingSubjects = new Map();
+  roadmap.phases.forEach(p => p.tasks.forEach(t => {
+    if(t.done) doneTexts.add(t.text);
+    if(t?.text) existingSubjects.set(t.text, t.subject || '');
+  }));
 
   const newPhases = normalizePhases(parsed.phases).map(p => ({
     ...p,
-    tasks: p.tasks.map(t => ({ ...t, done: doneTexts.has(t.text) }))
+    tasks: p.tasks.map(t => ({
+      ...t,
+      done: doneTexts.has(t.text),
+      subject: t.subject || existingSubjects.get(t.text) || ''
+    }))
   }));
+  const subjectProgress = normalizeSubjectProgress(parsed.subjectProgress || roadmap.subjectProgress, newPhases);
 
   return {
     ...roadmap,
     overview: parsed.overview || roadmap.overview,
     diagnosis: parsed.diagnosis || '',
+    subjectProgress,
     phases: newPhases,
     lastReviewedAt: todayStr()
   };
@@ -494,6 +514,15 @@ async function callAiAndParse(body){
   try {
     return normalizeParsedResponse(JSON.parse(raw));
   } catch(e){
+    const repaired = tryRepairJsonText(raw);
+    if(repaired){
+      try {
+        return normalizeParsedResponse(JSON.parse(repaired));
+      } catch(_){
+        // 次の候補を試す
+      }
+    }
+
     const candidates = extractJsonCandidates(raw);
     for(const candidate of candidates){
       try {
@@ -502,6 +531,16 @@ async function callAiAndParse(body){
         // 次の候補を試す
       }
     }
+
+    try {
+      const corrected = await repairJsonWithModel(raw);
+      if(corrected){
+        return normalizeParsedResponse(corrected);
+      }
+    } catch(_){
+      // 追加の修復も失敗した場合はそのまま下へ
+    }
+
     throw new Error('応答の解析に失敗しました。AIの返答がJSON形式ではありませんでした: ' + raw.slice(0, 160));
   }
 }
@@ -545,6 +584,43 @@ function cleanJsonLikeText(text){
     .trim()
     .replace(/^json\s*/i, '')
     .trim();
+}
+
+function tryRepairJsonText(text){
+  const candidate = String(text || '')
+    .trim()
+    .replace(/,\s*([}\]])/g, '$1');
+
+  const openBrace = (candidate.match(/\{/g) || []).length;
+  const closeBrace = (candidate.match(/}/g) || []).length;
+  const openBracket = (candidate.match(/\[/g) || []).length;
+  const closeBracket = (candidate.match(/]/g) || []).length;
+
+  let repaired = candidate;
+  if(openBrace > closeBrace) repaired += '}'.repeat(openBrace - closeBrace);
+  if(openBracket > closeBracket) repaired += ']'.repeat(openBracket - closeBracket);
+
+  return repaired.trim() && repaired !== candidate ? repaired : null;
+}
+
+async function repairJsonWithModel(rawText){
+  const repairBody = {
+    model: GEMINI_MODEL,
+    max_tokens: 2500,
+    system: 'あなたは JSON 修復エージェントです。与えられた不正な JSON を、元の意図を保ったまま正しい JSON のみで返してください。前置きや説明は絶対に不要です。',
+    messages: [{ role: 'user', content: `以下の応答は JSON として不正です。元の意図を保ちつつ、正しい JSON のみを返してください。\n\n${rawText}` }],
+    tools: []
+  };
+
+  const repairedText = await callAiText(repairBody);
+  const cleaned = cleanJsonLikeText(repairedText);
+  if(!cleaned) return null;
+
+  try {
+    return JSON.parse(cleaned);
+  } catch(_){
+    return null;
+  }
 }
 
 function extractJsonCandidates(text){
@@ -591,10 +667,94 @@ function normalizePhases(phases){
     name: p.name || `フェーズ${pi + 1}`,
     period: p.period || '',
     goal: p.goal || '',
-    tasks: (p.tasks || []).map((t, ti) => ({
-      id: `p${pi}-t${ti}-${Date.now().toString(36)}`,
-      text: typeof t === 'string' ? t : (t.text || ''),
-      done: false
-    }))
+    tasks: (p.tasks || []).map((t, ti) => normalizeTask(t, pi, ti))
   }));
+}
+
+function normalizeTask(task, phaseIdx, taskIdx){
+  const text = typeof task === 'string' ? task : (task?.text || '');
+  const subject = normalizeTaskSubject(task);
+  return {
+    id: `p${phaseIdx}-t${taskIdx}-${Date.now().toString(36)}`,
+    text,
+    done: Boolean(task?.done),
+    subject,
+    userAdded: Boolean(task?.userAdded)
+  };
+}
+
+function normalizeTaskSubject(task){
+  if(!task || typeof task === 'string') return 'その他';
+  const raw = String(task?.subject || task?.subjectName || '').trim();
+  if(raw) return raw;
+  const inferred = inferSubjectFromText(String(task?.text || ''));
+  return inferred || 'その他';
+}
+
+function normalizeSubjectProgress(subjectProgress, phases){
+  if(Array.isArray(subjectProgress) && subjectProgress.length){
+    const normalized = subjectProgress
+      .map(item => {
+        const subject = String(item?.subject || item?.name || '').trim();
+        if(!subject) return null;
+        const progressValue = Number(item?.progress);
+        const progress = Number.isFinite(progressValue)
+          ? Math.max(0, Math.min(100, Math.round(progressValue)))
+          : 0;
+        return {
+          subject,
+          progress,
+          note: String(item?.note || '').trim()
+        };
+      })
+      .filter(Boolean);
+    if(normalized.length) return normalized;
+  }
+
+  return inferSubjectProgressFromTasks(phases);
+}
+
+function inferSubjectProgressFromTasks(phases){
+  const stats = new Map();
+  const add = (subject, done) => {
+    if(!subject) return;
+    const entry = stats.get(subject) || { total: 0, done: 0 };
+    entry.total += 1;
+    if(done) entry.done += 1;
+    stats.set(subject, entry);
+  };
+
+  for(const phase of phases || []){
+    for(const task of phase.tasks || []){
+      const subject = normalizeTaskSubject(task) || inferSubjectFromText(String(task?.text || ''));
+      add(subject, Boolean(task?.done));
+    }
+  }
+
+  return Array.from(stats.entries())
+    .map(([subject, entry]) => ({
+      subject,
+      progress: entry.total ? Math.round((entry.done / entry.total) * 100) : 0,
+      note: `${entry.done}/${entry.total} タスク完了`
+    }))
+    .sort((a, b) => a.subject.localeCompare(b.subject, 'ja'));
+}
+
+function inferSubjectFromText(text){
+  const source = String(text || '').trim();
+  if(!source) return '';
+  const patterns = [
+    ['情報理論', /(情報理論|情報量|エントロピー|相互情報量|通信路|符号)/u],
+    ['アルゴリズムとデータ構造', /(アルゴリズム|データ構造|グラフ|整列|探索|計算量|リスト|キュー|スタック|ヒープ|ハッシュ)/u],
+    ['基礎数学', /(基礎数学|線形代数|微分積分|行列|極限|微分|積分|固有値)/u],
+    ['情報数学', /(情報数学|論理|言語理論|オートマトン|集合|関係|写像|ブール)/u],
+    ['確率・統計', /(確率|統計|分散|期待値|独立|標本分布|仮説検定)/u],
+    ['人工知能', /(人工知能|機械学習|ニューラル|Q学習|探索と推論|ゲーム理論)/u],
+    ['コンピュータシステム', /(コンピュータシステム|OS|ネットワーク|アーキテクチャ|ページング|キャッシュ|DNS|C言語|論理回路)/u],
+    ['応用数学', /(応用数学|微分方程式|ベクトル解析|ラプラス|フーリエ|複素解析)/u]
+  ];
+  for(const [subject, pattern] of patterns){
+    if(pattern.test(source)) return subject;
+  }
+  return 'その他';
 }
