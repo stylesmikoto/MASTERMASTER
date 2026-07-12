@@ -46,6 +46,61 @@ const HOKUDAI_EXAM_REFERENCE = `
 　コンピュータアーキテクチャ、オペレーティングシステム、コンピュータネットワーク、クラウドコンピューティング、論理回路、データ表現、C言語プログラミングなど
 ・応用数学
 　ベクトル解析、微分方程式（多変数）、ラプラス変換、フーリエ解析、複素解析など
+
+【分野別 出題傾向・重点単元（詳細メモ）】
+このセクションは、各科目で実際に問題になりやすい単元・観点をまとめたものである。タスク生成・優先順位付けの際、該当科目のタスクはここに挙げた単元・観点を具体的に反映すること。
+
+■情報理論
+- 情報量やエントロピーの定義から、情報源・通信路符号化の理論的限界と具体的手法（ハフマン符号、ハミング符号等）を網羅している
+- 情報源符号化分野では、瞬時符号の条件（クラフトの不等式）やハフマン符号による平均符号長の最小化プロセスに注視が必要である
+- 情報源モデルでは、マルコフ情報源の状態遷移図および遷移確率行列から定常分布や情報源エントロピーを導出する計算問題が重要である
+- 通信路符号化分野では、相互情報量を用いた通信路容量の算出や、ハミング符号・巡回符号における生成多項式とシンドロームを用いた誤り訂正法を重視すべきである
+- 主要な問題内容は、エントロピー関数を用いた数値計算、ブロック符号化の効率評価、およびCRC方式による誤り検出の具体的手順の把握である
+
+■アルゴリズムとデータ構造
+- アルゴリズムの定義と計算量（O記法）を習得する
+- スタック、キュー、連結リスト、二分探索木、ヒープ、ハッシュ表の各構造と操作を習得する
+- 各種ソート（クイック、ヒープ等）の仕組みと最悪・平均時間計算量の評価方法を注視する
+- グラフの探索（BFS/DFS）、最小全域木（クラスカル/プリム）、最短路（ダイクストラ）の解法を学ぶ
+- 再帰的設計、データ構造の実装、および入力サイズに対する漸近的な時間計算量の解析を重点的に学習する
+
+■コンピュータシステム
+- CPU内部動作と命令セット: 機械語命令のフェッチから実行までのステップと、CISC/RISCの特性を理解する
+- 並列処理とパイプライン: スループット向上のためのパイプライン設計、ハザード対策、SIMD/MIMDの分類を整理する
+- メモリ階層とキャッシュ: 参照の局所性を利用したキャッシュの配置方式（直接、完全、部分連想）と書き込み法を比較する
+- プロセス管理と同期: OSのスケジューリング（ラウンドロビン等）と、セマフォ等を用いた相互排除の仕組みを詳述する
+- 仮想化と保護: 仮想メモリのページング機構（TLB、ページフォールト）と、特権モードによるカーネル保護を論じる
+- 数値表現と計算誤差: IEEE754形式(32/64bit)の理解と、情報落ち・桁落ち等の誤差要因、および絶対・相対誤差限界の理論的評価
+
+■情報数学
+- 順列・組合せでは、重複組合せ（nHr）や二項定理を用いた数え上げの計算手順を習得する
+- 基数変換、2の補数による減算、浮動小数点演算における丸め誤差・桁落ち・情報落ちなど、数値表現上の留意点を整理する
+- 論理代数式の簡略化に加え、述語論理（∀・∃）を用いた命題の数式化と推論の妥当性評価の手法を身につける
+- ド・モルガンの法則等の基本定理を用いた式変形・証明のパターンを反復して習得する
+
+■応用数学
+- 勾配ベクトル、線積分、微分方程式の挙動や完全微分形式の証明を含む解析学・微分方程式を整理する
+- フーリエ級数展開の定義と具体的関数への適用、およびその結果を用いた級数の和の算出を習得する
+- ラプラス方程式、ラプラス変換の導出と収束条件、複素べき級数の収束円と収束半径の決定を重点的に学習する
+
+■人工知能
+- ディープラーニング（CNN, RNN, LLM）の基本構造、歴史、および社会的背景（ハルシネーション、セキュリティ、倫理ガイドライン）を整理する
+- ニューラルネットワークの数学的基礎（活性化関数の定義、誤差関数の偏微分と勾配降下法、過学習の発生原因と対策）を習得する
+- 代表的な機械学習アルゴリズム（SVMのマージン最大化とカーネル法、K近傍法の計算特性、DQNなどの強化学習の定式化）を整理する
+
+■基礎数学
+- 線形代数（計算）: 行列の固有値・固有ベクトル、対角化（直交行列による同時対角化含む）、および行列の累乗計算とベクトルの一般項導出を習得する
+- 線形代数（証明）: 関数空間や部分空間の判定、基底や線形独立性の証明、線形写像の行列表示、および内積に基づく関数の直交性の証明を習得する
+- 解析学（微分）: 多変数関数の2次のテイラー展開やマクローリン展開、および偏微分方程式を用いた調和関数の証明を習得する
+- 解析学（極値・解法）: 停留点の抽出と極大・極小・鞍点の判定、および定数係数をもつ高階微分方程式の一般解の導出を習得する
+- 総合・記述: 行列を用いた図形の面積の収束判定や、関数空間における固有値問題など、定義に基づいた論理的な導出過程を正確に記述する
+
+■確率・統計
+- 確率分布の特性: 離散・連続型確率変数の累積分布・密度関数の特定、期待値・分散の導出、および全確率が1であることの証明を習得する
+- 変数の変換と母関数: 対数変換等を含む変数変換による新たな分布の導出、および確率母関数を用いた統計的性質の計算を習得する
+- 統計的推定の理論: 標本平均や標本統計量（不偏分散等）の不偏性に関する数学的証明と、正規分布に従う標本の理論的性質を理解する
+- 仮説検定の体系: 有意水準、棄却域、検出力、最強力検定の定義を正確に把握し、具体的な検定統計量を用いた棄却域の導出を習得する
+- モデルの応用と記述: 試行回数や期待値に基づくゲーム戦略の有利性判定など、事象を数理モデル化し導出過程を論理的に記述する力を養う
 `.trim();
 
 // -------- プロンプト生成 --------
@@ -93,6 +148,19 @@ const TASK_GRANULARITY_RULES = `
 良い例: 「確認できた直近年度の基礎数学の大問1題を40分で解き、採点後に誤答した小問を解答を見ずにもう一度解く」
 `.trim();
 
+const SUBJECT_PRIORITY_RULES = `
+【科目・単元の優先順位】
+フェーズの並び順、および各フェーズ内のタスクの順序は、以下の優先順位を反映すること（優先度が高いものほど早いフェーズ・早いタスク順に配置する）。
+
+1. 最優先: 情報理論（専門科目1の選択科目として選ばれている場合）、コンピュータネットワーク（コンピュータシステム科目内の一単元。同科目の他単元より先に配置する）、アルゴリズムとデータ構造（専門科目2の科目）
+2. 次点: 上記1に該当しない専門科目2の科目・単元（人工知能、コンピュータシステムのネットワーク以外の単元、応用数学）
+3. その次: 上記1に該当しない専門科目1の科目・単元（情報数学、確率・統計。情報理論が選択されていない場合はここに含めない）
+4. 最も優先度を下げる: 基礎数学（他の科目のタスクが一巡した後、後半のフェーズに重点的に配置する）
+
+- ユーザーが選択していない科目（専門科目1・2で選ばれていない選択科目）は登場させない
+- 直前期（最終フェーズ）は総仕上げ・過去問演習が中心のため、この優先順位より過去問演習・弱点補強を優先してよい
+`.trim();
+
 // 新規作成用のシステムプロンプト。Web検索の使用を明示的に指示。
 const SYSTEM_GENERATE = `あなたは大学院入試（院試）対策に精通した学習コーチです。学生から与えられた情報をもとに、今日から試験日までの現実的な学習ロードマップを作成してください。
 
@@ -106,17 +174,26 @@ const SYSTEM_GENERATE = `あなたは大学院入試（院試）対策に精通�
 
 ${TASK_GRANULARITY_RULES}
 
+${SUBJECT_PRIORITY_RULES}
+
 出力は必ず以下のJSON形式のみとし、前置きや後置きの文章、Markdownのコードブロック記号（\`\`\`）は一切含めないでください。JSON以外の文字を1文字も出力しないこと。
 
 {
   "overview": "全体の学習方針を2〜3文で要約した文章。Web検索で得た情報があればそれを反映する",
   "sources": ["参照した公式サイト等のURL（あれば）"],
+  "subjectProgress": [
+    {"subject": "情報理論", "progress": 30, "note": "今は基礎概念の理解が進んでいる状態"}
+  ],
   "phases": [
     {
       "name": "フェーズ名（例：基礎固め期）",
       "period": "期間の目安（例：7月中旬〜8月末）",
       "goal": "このフェーズで達成すべきことを1文で",
-      "tasks": ["具体的なタスク1", "具体的なタスク2", "具体的なタスク3"]
+      "tasks": [
+        {"text": "具体的なタスク1", "subject": "情報理論"},
+        {"text": "具体的なタスク2", "subject": "アルゴリズムとデータ構造"},
+        {"text": "具体的なタスク3", "subject": "基礎数学"}
+      ]
     }
   ]
 }
@@ -124,8 +201,11 @@ ${TASK_GRANULARITY_RULES}
 条件:
 - フェーズは今日から試験日までを3〜6個程度に分割し、時系列順に並べる
 - 各フェーズのタスクは3〜7個とし、すべて上記の「タスクの粒度」を満たす
+- 上記の「科目・単元の優先順位」に沿ってフェーズ・タスクの順序を決める
 - 過去問の傾向・作問者の情報・目標点数があれば優先順位に反映する
 - 苦手科目や使える時間などの自由記述があれば配分に反映する
+- 主要科目ごとに、subjectProgress に 0〜100 の整数で進捗率を付け、必要に応じて note で簡潔な状態を説明する
+- どの科目にも当てはまらないタスクは、subject を「その他」にして分類する
 - 最後のフェーズは試験直前期（総仕上げ・過去問演習・体調管理など）にする
 - 添付資料（過去問PDF等）があれば内容を精読し、タスクに具体的に反映する`;
 
@@ -140,28 +220,39 @@ const SYSTEM_ADJUST = `あなたは大学院入試（院試）対策に精通し
 
 ${TASK_GRANULARITY_RULES}
 
+${SUBJECT_PRIORITY_RULES}
+
 出力は必ず以下のJSON形式のみとし、前置きや後置きの文章、Markdownのコードブロック記号（\`\`\`）は一切含めないでください。
 
 {
   "overview": "調整後の学習方針を2〜3文で要約",
   "diagnosis": "現状分析を2〜3文（何が遅れているか / 順調な点 / リスク）",
+  "subjectProgress": [
+    {"subject": "科目", "progress": 進捗率, "note": "基礎理解は進んでいる"}
+  ],
   "phases": [
     {
       "name": "フェーズ名",
       "period": "期間の目安",
       "goal": "このフェーズの到達目標",
-      "tasks": ["タスク1", "タスク2"]
+      "tasks": [
+        {"text": "タスク1", "subject": "情報理論"},
+        {"text": "タスク2", "subject": "アルゴリズムとデータ構造"}
+      ]
     }
   ]
 }
 
 条件:
 - 既に完了したタスクは尊重し、繰り返させない
+- 上記の「科目・単元の優先順位」に沿って残タスク・追加タスクの順序を決める
 - 遅れている場合は残タスクを削って優先度の高いものに絞る
 - 進んでいる場合は補強タスクや過去問演習を追加してもよい
 - フェーズの期間は今日〜試験日で再割り当てする
 - 過度に非現実的なペースを課さない
-- 新規・継続を問わず、未完了タスクはすべて上記の「タスクの粒度」を満たすよう必要に応じて分割・具体化する`;
+- 新規・継続を問わず、未完了タスクはすべて上記の「タスクの粒度」を満たすよう必要に応じて分割・具体化する
+- subjectProgress も現状の学習状態に合わせて更新する
+- どの科目にも当てはまらないタスクは「その他」にまとめる`;
 
 // -------- 添付ファイルをmessages contentに変換 --------
 
@@ -207,6 +298,7 @@ export async function generateRoadmap(form){
 
   const parsed = await callAiAndParse(body);
   const phases = normalizePhases(parsed.phases);
+  const subjectProgress = normalizeSubjectProgress(parsed.subjectProgress, phases);
   if(!phases.length){
     throw new Error('AIの応答にロードマップのphasesが含まれていませんでした。もう一度作成してください。');
   }
@@ -214,6 +306,7 @@ export async function generateRoadmap(form){
   return {
     overview: parsed.overview || '',
     sources: parsed.sources || [],
+    subjectProgress,
     university: form.university,
     target: form.target,
     examDate: form.examDate,
@@ -367,17 +460,27 @@ ${JSON.stringify(context, null, 2)}`;
 
   // 完了済みタスクは可能な限り維持（テキスト一致で紐付け）
   const doneTexts = new Set();
-  roadmap.phases.forEach(p => p.tasks.forEach(t => { if(t.done) doneTexts.add(t.text); }));
+  const existingSubjects = new Map();
+  roadmap.phases.forEach(p => p.tasks.forEach(t => {
+    if(t.done) doneTexts.add(t.text);
+    if(t?.text) existingSubjects.set(t.text, t.subject || '');
+  }));
 
   const newPhases = normalizePhases(parsed.phases).map(p => ({
     ...p,
-    tasks: p.tasks.map(t => ({ ...t, done: doneTexts.has(t.text) }))
+    tasks: p.tasks.map(t => ({
+      ...t,
+      done: doneTexts.has(t.text),
+      subject: t.subject || existingSubjects.get(t.text) || ''
+    }))
   }));
+  const subjectProgress = normalizeSubjectProgress(parsed.subjectProgress || roadmap.subjectProgress, newPhases);
 
   return {
     ...roadmap,
     overview: parsed.overview || roadmap.overview,
     diagnosis: parsed.diagnosis || '',
+    subjectProgress,
     phases: newPhases,
     lastReviewedAt: todayStr()
   };
@@ -419,6 +522,15 @@ async function callAiAndParse(body){
   try {
     return normalizeParsedResponse(JSON.parse(raw));
   } catch(e){
+    const repaired = tryRepairJsonText(raw);
+    if(repaired){
+      try {
+        return normalizeParsedResponse(JSON.parse(repaired));
+      } catch(_){
+        // 次の候補を試す
+      }
+    }
+
     const candidates = extractJsonCandidates(raw);
     for(const candidate of candidates){
       try {
@@ -427,6 +539,16 @@ async function callAiAndParse(body){
         // 次の候補を試す
       }
     }
+
+    try {
+      const corrected = await repairJsonWithModel(raw);
+      if(corrected){
+        return normalizeParsedResponse(corrected);
+      }
+    } catch(_){
+      // 追加の修復も失敗した場合はそのまま下へ
+    }
+
     throw new Error('応答の解析に失敗しました。AIの返答がJSON形式ではありませんでした: ' + raw.slice(0, 160));
   }
 }
@@ -470,6 +592,43 @@ function cleanJsonLikeText(text){
     .trim()
     .replace(/^json\s*/i, '')
     .trim();
+}
+
+function tryRepairJsonText(text){
+  const candidate = String(text || '')
+    .trim()
+    .replace(/,\s*([}\]])/g, '$1');
+
+  const openBrace = (candidate.match(/\{/g) || []).length;
+  const closeBrace = (candidate.match(/}/g) || []).length;
+  const openBracket = (candidate.match(/\[/g) || []).length;
+  const closeBracket = (candidate.match(/]/g) || []).length;
+
+  let repaired = candidate;
+  if(openBrace > closeBrace) repaired += '}'.repeat(openBrace - closeBrace);
+  if(openBracket > closeBracket) repaired += ']'.repeat(openBracket - closeBracket);
+
+  return repaired.trim() && repaired !== candidate ? repaired : null;
+}
+
+async function repairJsonWithModel(rawText){
+  const repairBody = {
+    model: GEMINI_MODEL,
+    max_tokens: 2500,
+    system: 'あなたは JSON 修復エージェントです。与えられた不正な JSON を、元の意図を保ったまま正しい JSON のみで返してください。前置きや説明は絶対に不要です。',
+    messages: [{ role: 'user', content: `以下の応答は JSON として不正です。元の意図を保ちつつ、正しい JSON のみを返してください。\n\n${rawText}` }],
+    tools: []
+  };
+
+  const repairedText = await callAiText(repairBody);
+  const cleaned = cleanJsonLikeText(repairedText);
+  if(!cleaned) return null;
+
+  try {
+    return JSON.parse(cleaned);
+  } catch(_){
+    return null;
+  }
 }
 
 function extractJsonCandidates(text){
@@ -516,10 +675,94 @@ function normalizePhases(phases){
     name: p.name || `フェーズ${pi + 1}`,
     period: p.period || '',
     goal: p.goal || '',
-    tasks: (p.tasks || []).map((t, ti) => ({
-      id: `p${pi}-t${ti}-${Date.now().toString(36)}`,
-      text: typeof t === 'string' ? t : (t.text || ''),
-      done: false
-    }))
+    tasks: (p.tasks || []).map((t, ti) => normalizeTask(t, pi, ti))
   }));
+}
+
+function normalizeTask(task, phaseIdx, taskIdx){
+  const text = typeof task === 'string' ? task : (task?.text || '');
+  const subject = normalizeTaskSubject(task);
+  return {
+    id: `p${phaseIdx}-t${taskIdx}-${Date.now().toString(36)}`,
+    text,
+    done: Boolean(task?.done),
+    subject,
+    userAdded: Boolean(task?.userAdded)
+  };
+}
+
+function normalizeTaskSubject(task){
+  if(!task || typeof task === 'string') return 'その他';
+  const raw = String(task?.subject || task?.subjectName || '').trim();
+  if(raw) return raw;
+  const inferred = inferSubjectFromText(String(task?.text || ''));
+  return inferred || 'その他';
+}
+
+function normalizeSubjectProgress(subjectProgress, phases){
+  if(Array.isArray(subjectProgress) && subjectProgress.length){
+    const normalized = subjectProgress
+      .map(item => {
+        const subject = String(item?.subject || item?.name || '').trim();
+        if(!subject) return null;
+        const progressValue = Number(item?.progress);
+        const progress = Number.isFinite(progressValue)
+          ? Math.max(0, Math.min(100, Math.round(progressValue)))
+          : 0;
+        return {
+          subject,
+          progress,
+          note: String(item?.note || '').trim()
+        };
+      })
+      .filter(Boolean);
+    if(normalized.length) return normalized;
+  }
+
+  return inferSubjectProgressFromTasks(phases);
+}
+
+function inferSubjectProgressFromTasks(phases){
+  const stats = new Map();
+  const add = (subject, done) => {
+    if(!subject) return;
+    const entry = stats.get(subject) || { total: 0, done: 0 };
+    entry.total += 1;
+    if(done) entry.done += 1;
+    stats.set(subject, entry);
+  };
+
+  for(const phase of phases || []){
+    for(const task of phase.tasks || []){
+      const subject = normalizeTaskSubject(task) || inferSubjectFromText(String(task?.text || ''));
+      add(subject, Boolean(task?.done));
+    }
+  }
+
+  return Array.from(stats.entries())
+    .map(([subject, entry]) => ({
+      subject,
+      progress: entry.total ? Math.round((entry.done / entry.total) * 100) : 0,
+      note: `${entry.done}/${entry.total} タスク完了`
+    }))
+    .sort((a, b) => a.subject.localeCompare(b.subject, 'ja'));
+}
+
+function inferSubjectFromText(text){
+  const source = String(text || '').trim();
+  if(!source) return '';
+  const patterns = [
+    ['情報理論', /(情報理論|情報量|エントロピー|相互情報量|通信路|符号)/u],
+    ['アルゴリズムとデータ構造', /(アルゴリズム|データ構造|グラフ|整列|探索|計算量|リスト|キュー|スタック|ヒープ|ハッシュ)/u],
+    ['基礎数学', /(基礎数学|線形代数|微分積分|行列|極限|微分|積分|固有値)/u],
+    ['情報数学', /(情報数学|論理|言語理論|オートマトン|集合|関係|写像|ブール)/u],
+    ['確率・統計', /(確率|統計|分散|期待値|独立|標本分布|仮説検定)/u],
+    ['人工知能', /(人工知能|機械学習|ニューラル|Q学習|探索と推論|ゲーム理論)/u],
+    ['コンピュータシステム', /(コンピュータシステム|OS|ネットワーク|アーキテクチャ|ページング|キャッシュ|DNS|C言語|論理回路)/u],
+    ['応用数学', /(応用数学|微分方程式|ベクトル解析|ラプラス|フーリエ|複素解析)/u]
+  ];
+  for(const [subject, pattern] of patterns){
+    if(pattern.test(source)) return subject;
+  }
+  return 'その他';
 }
