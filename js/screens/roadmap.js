@@ -235,11 +235,17 @@ function bindEvents(app, state, actions, rm){
       const phaseIdx = parseInt(el.getAttribute('data-phase'), 10);
       const taskId = el.getAttribute('data-task');
       const task = rm.phases[phaseIdx].tasks.find(t => t.id === taskId);
-      if(task){
-        task.done = !task.done;
-        actions.rerender();
-        await actions.persist();
-      }
+      if(!task) return;
+
+      openTaskActionPopup({
+        task,
+        onToggleDone: async () => {
+          task.done = !task.done;
+          actions.rerender();
+          await actions.persist();
+        },
+        onExplain: () => actions.onExplainTask(task.text)
+      });
     });
   });
 
@@ -312,4 +318,68 @@ function bindEvents(app, state, actions, rm){
   if(remEnabled) remEnabled.addEventListener('change', () => actions.onReminderChange({ enabled: remEnabled.checked, time: remTime.value }));
   if(remTime) remTime.addEventListener('change', () => actions.onReminderChange({ enabled: remEnabled.checked, time: remTime.value }));
   if(remTest) remTest.addEventListener('click', actions.onReminderTest);
+}
+
+function openTaskActionPopup({ task, onToggleDone, onExplain }){
+  const overlay = document.createElement('div');
+  overlay.className = 'task-popup-overlay';
+  overlay.innerHTML = `
+    <div class="task-popup" role="dialog" aria-modal="true" aria-label="タスク操作">
+      <button class="task-popup-close" type="button" aria-label="閉じる">×</button>
+      <div class="task-popup-title">タスク</div>
+      <div class="task-popup-task">${esc(task.text)}</div>
+      <div class="task-popup-actions">
+        <button class="btn-accent" type="button" data-role="toggle-done">${task.done ? '未完了に戻す' : '完了にする'}</button>
+        <button class="btn-ghost" type="button" data-role="explain">もっと詳しく</button>
+      </div>
+      <div class="task-popup-result" data-role="result" hidden></div>
+    </div>
+  `;
+
+  const close = () => {
+    overlay.remove();
+    document.removeEventListener('keydown', onKeydown);
+  };
+
+  const onKeydown = (ev) => {
+    if(ev.key === 'Escape') close();
+  };
+
+  overlay.addEventListener('click', (ev) => {
+    if(ev.target === overlay) close();
+  });
+
+  overlay.querySelector('.task-popup-close')?.addEventListener('click', close);
+
+  const toggleBtn = overlay.querySelector('[data-role="toggle-done"]');
+  const explainBtn = overlay.querySelector('[data-role="explain"]');
+  const resultEl = overlay.querySelector('[data-role="result"]');
+
+  toggleBtn?.addEventListener('click', async () => {
+    await onToggleDone();
+    close();
+  });
+
+  explainBtn?.addEventListener('click', async () => {
+    if(!resultEl) return;
+    explainBtn.disabled = true;
+    toggleBtn.disabled = true;
+    explainBtn.textContent = '取得中...';
+    resultEl.hidden = false;
+    resultEl.textContent = 'Geminiに問い合わせています...';
+
+    try {
+      const detail = await onExplain();
+      resultEl.textContent = detail || '詳細を取得できませんでした。';
+    } catch(e) {
+      resultEl.textContent = `取得に失敗しました: ${e?.message || 'エラー'}`;
+    } finally {
+      explainBtn.disabled = false;
+      toggleBtn.disabled = false;
+      explainBtn.textContent = 'もっと詳しく';
+    }
+  });
+
+  document.body.appendChild(overlay);
+  document.addEventListener('keydown', onKeydown);
 }
