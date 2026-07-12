@@ -33,6 +33,7 @@ const state = {
   screen: 'loadingInit',
   form: {
     university: '', target: '', examDate: '', subjects: '',
+    subject1Elective: '', subject2: [],
     pastExam: '', examiner: '', freeNote: '',
     customInstructions: '',
     attachments: []
@@ -85,10 +86,24 @@ async function persistSettings(){
 }
 
 function readFormValues(){
-  state.form.university = document.getElementById('f-university').value.trim();
+  const universityEl = document.getElementById('f-university');
+  const subjectsEl = document.getElementById('f-subjects');
+  const subject1Elective = document.querySelector('.sub1-checkbox:checked')?.value || '';
+  const subject2 = Array.from(document.querySelectorAll('.sub2-checkbox:checked')).map(el => el.value);
+
+  state.form.university = universityEl
+    ? universityEl.value.trim()
+    : '北海道大学大学院情報科学院 情報科学専攻 情報理工学コース';
   state.form.target = document.getElementById('f-target').value.trim();
   state.form.examDate = document.getElementById('f-examdate').value;
-  state.form.subjects = document.getElementById('f-subjects').value.trim();
+  state.form.subject1Elective = subject1Elective;
+  state.form.subject2 = subject2;
+  state.form.subjects = subjectsEl
+    ? subjectsEl.value.trim()
+    : [
+      `専門科目1: 基礎数学・情報数学${subject1Elective ? `・${subject1Elective}` : ''}`,
+      `専門科目2: ${subject2.length ? subject2.join('・') : '未選択'}`
+    ].join(' / ');
   state.form.pastExam = document.getElementById('f-pastexam').value.trim();
   state.form.examiner = document.getElementById('f-examiner').value.trim();
   state.form.freeNote = document.getElementById('f-freenote').value.trim();
@@ -122,6 +137,8 @@ const formActions = {
     state.error = null;
     if(!state.form.university){ state.error = '志望大学院・専攻を入力してください。'; render(); return; }
     if(!state.form.examDate){ state.error = '試験日を入力してください。'; render(); return; }
+    if(!state.form.subject1Elective){ state.error = '専門科目1の選択科目を1つ選んでください。'; render(); return; }
+    if((state.form.subject2 || []).length !== 2){ state.error = '専門科目2を2つ選んでください。'; render(); return; }
 
     const wasEditing = state.editingInputs;
     const oldRoadmap = wasEditing ? state.roadmap : null;
@@ -158,6 +175,7 @@ const formActions = {
     // フォームをクリア
     state.form = {
       university: '', target: '', examDate: '', subjects: '',
+      subject1Elective: '', subject2: [],
       pastExam: '', examiner: '', freeNote: '',
       customInstructions: '', attachments: []
     };
@@ -303,6 +321,8 @@ const roadmapActions = {
       target: orig.target || state.roadmap.target || '',
       examDate: orig.examDate || state.roadmap.examDate || '',
       subjects: orig.subjects || '',
+      subject1Elective: orig.subject1Elective || '',
+      subject2: orig.subject2 || [],
       pastExam: orig.pastExam || '',
       examiner: orig.examiner || '',
       freeNote: orig.freeNote || '',

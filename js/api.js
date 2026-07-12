@@ -4,14 +4,34 @@ import { GEMINI_MODEL } from './config.js';
 import { todayStr } from './utils.js';
 
 const API_URL = '/api/gemini';
-const ALLOWED_REFERENCE_URL = 'https://abigworld1.github.io/grad_exam.html';
+
+const HOKUDAI_EXAM_REFERENCE = `
+【対象】北海道大学大学院情報科学院修士課程入学試験（情報理工学コース）
+【方針】このプロンプトでは他大学を一切考慮しない。北大の公開情報だけを前提に、試験範囲・傾向・選択科目・学習順序を決める。
+
+【公開ページから反映する要点】
+- 試験は専門科目1と専門科目2で構成される
+- 専門科目1は基礎数学、情報数学、確率・統計、情報理論の4問のうち、基礎数学と情報数学を含む3問を解答する
+- 専門科目2はアルゴリズムとデータ構造、人工知能、コンピュータシステム、応用数学の4問のうち2問を選択して解答する
+- 専門科目1と専門科目2はいずれも試験時間2時間である
+- 選択科目の難易度差があるため、科目選択は事前に吟味する必要がある
+- 10年分の過去問を解く価値が高く、2013年以前は最近の問題と大きく異なるため優先度が低い
+- 2023年のコンピュータシステムと2015年のコンピュータ基礎工学、2022年の情報数学と2014年の情報数学のように、大問単位で類似や使い回しがある
+- 基礎数学では、行列、固有値分解、線形部分空間、基底、集合の証明、停留点、極座標変換、マクローリン展開、逆三角関数、双曲線関数が重点として整理されている
+- 情報数学では、正規言語、文脈自由言語、文脈依存文法、ポンピング定理、命題論理、述語論理、距離関数、同値関係が重点として整理されている
+- 確率・統計では、一致性、不偏性、期待値、分散、共分散、独立と無相関、各種分布が重点として整理されている
+- 情報理論では、エントロピー、相互情報量、条件付きエントロピー、通信路容量、(7,4)ハミング符号、巡回符号、正規マルコフ情報源のエントロピーが重点として整理されている
+- アルゴリズムとデータ構造では、計算量、隣接リスト、全域木、グラフの種類、ユークリッドの互除法が重点として整理されている
+- 人工知能では、Q学習とニューラルネットワークが重点として整理されている
+- コンピュータシステムでは、補数表現、固定小数点方式と浮動小数点方式、キャッシュメモリ、IPアドレス、OSスケジューラ、ページング方式、C言語、ノイマン型コンピュータ、OSI参照モデル、DNSが重点として整理されている
+- 選択科目は、難易度だけでなく、自分の研究関心と時間配分を踏まえて決める
+`.trim();
 
 // -------- プロンプト生成 --------
 
 function buildUserContent(f){
   const base = `
 【今日の日付】${todayStr()}
-【志望大学院・専攻】${f.university}
 【目標点数・順位】${f.target || '未記入'}
 【試験日】${f.examDate}
 【試験科目・形式】${f.subjects || '未記入'}
@@ -20,32 +40,37 @@ function buildUserContent(f){
 【自由記述】${f.freeNote || '未記入'}
 `.trim();
 
+  const reference = HOKUDAI_EXAM_REFERENCE;
+
   if(f.customInstructions && f.customInstructions.trim()){
     return `${base}
+
+${reference}
 
 【ユーザからの追加指示 — これを最優先で反映してください】
 ${f.customInstructions.trim()}`;
   }
-  return base;
+  return `${base}
+
+${reference}`;
 }
 
-// 新規作成用のシステムプロンプト。参照先を限定してトークン消費を抑える。
+// 新規作成用のシステムプロンプト。Web検索の使用を明示的に指示。
 const SYSTEM_GENERATE = `あなたは大学院入試（院試）対策に精通した学習コーチです。学生から与えられた情報をもとに、今日から試験日までの現実的な学習ロードマップを作成してください。
 
-【参照ルール】
-- web_searchなどの広範なWeb検索は行わないこと。
-- 参照してよい情報源は、ユーザーが入力・添付した過去問や資料、および次のサイトだけです: ${ALLOWED_REFERENCE_URL}
-- 上記以外の大学公式サイト、募集要項、個人ブログ、検索結果、推測上のURLは参照しないこと。
-- 指定サイトや添付資料から確認できない事項は、断定せず「入力情報からは不明」として扱うこと。
-- sourcesには、ユーザーが入力した過去問URL、添付資料名、または ${ALLOWED_REFERENCE_URL} のみを含めること。
+【重要】まず必要に応じてweb_searchツールを使い、以下を確認してから設計してください:
+- 志望大学院・専攻の公式サイトや募集要項（試験科目・配点・過去問公開状況）
+- 過去に公開されている過去問や対策情報
+- 指定された研究室・作問者の研究分野
+- ユーザーが提示した情報が古くないか、現在も有効か
+
+検索は必須ではありませんが、大学名・研究室名が明示されている場合は原則1〜3回の検索で裏取りしてください。
 
 出力は必ず以下のJSON形式のみとし、前置きや後置きの文章、Markdownのコードブロック記号（\`\`\`）は一切含めないでください。JSON以外の文字を1文字も出力しないこと。
-値が不明でも説明文をJSONの外に書かず、必ずJSON内の文字列として表現してください。
-phasesは必ず1件以上含めてください。
 
 {
-  "overview": "全体の学習方針を2〜3文で要約した文章。入力資料と指定サイトの範囲で確認できる情報を反映する",
-  "sources": ["参照した過去問URL・添付資料名・指定サイトURL（あれば）"],
+  "overview": "全体の学習方針を2〜3文で要約した文章。Web検索で得た情報があればそれを反映する",
+  "sources": ["参照した公式サイト等のURL（あれば）"],
   "phases": [
     {
       "name": "フェーズ名（例：基礎固め期）",
@@ -62,8 +87,7 @@ phasesは必ず1件以上含めてください。
 - 過去問の傾向・作問者の情報・目標点数があれば優先順位に反映する
 - 苦手科目や使える時間などの自由記述があれば配分に反映する
 - 最後のフェーズは試験直前期（総仕上げ・過去問演習・体調管理など）にする
-- 添付資料（過去問PDF等）があれば内容を精読し、タスクに具体的に反映する
-- 参照先を広げず、少ない根拠で過度に詳しい制度情報を作らない`;
+- 添付資料（過去問PDF等）があれば内容を精読し、タスクに具体的に反映する`;
 
 // ロードマップ調整用のシステムプロンプト
 const SYSTEM_ADJUST = `あなたは大学院入試（院試）対策に精通した学習コーチです。既存のロードマップと現在の進捗状況をもとに、残り期間のロードマップを再調整してください。
@@ -158,6 +182,8 @@ export async function generateRoadmap(form){
       target: form.target,
       examDate: form.examDate,
       subjects: form.subjects,
+      subject1Elective: form.subject1Elective || '',
+      subject2: form.subject2 || [],
       pastExam: form.pastExam,
       examiner: form.examiner,
       freeNote: form.freeNote,
@@ -167,20 +193,17 @@ export async function generateRoadmap(form){
   };
 }
 
-// -------- 参照情報の再確認 (参照先限定) --------
+// -------- Web情報の再検証 (既存Webサイト・情報の確認) --------
 
 export async function verifyInformation(rm){
-  const target = rm.university;
-  const userContent = `以下の大学院入試について、入力済み情報と指定サイトの範囲だけで再確認してください。広範なWeb検索は行わないでください。
-- 志望大学院・専攻: ${target}
+  const userContent = `北海道大学大学院情報科学院修士課程入学試験（情報理工学コース）について、最新の公式情報を確認してください。web_searchを使い、以下を調査してください:
 - 記録されている試験日: ${rm.examDate}
 - 記録されている試験科目: ${rm.originalInputs?.subjects || '未記入'}
 - 記録されている研究室情報: ${rm.originalInputs?.examiner || '未記入'}
-- 参照してよい指定サイト: ${ALLOWED_REFERENCE_URL}
-- 記録されている参照URL: ${(rm.sources || []).join(', ') || 'なし'}
 
-各項目について、入力済み情報・過去問URL・指定サイトの範囲で一致しているか確認してください。
-確認できない項目は推測せず unclear にしてください。
+${HOKUDAI_EXAM_REFERENCE}
+
+各項目について、現時点の公式情報と一致しているか、または更新があるかを確認してください。
 
 出力は必ず以下のJSON形式のみ:
 
@@ -196,7 +219,7 @@ export async function verifyInformation(rm){
   const body = {
     model: GEMINI_MODEL,
     max_tokens: 2500,
-    system: `あなたは大学院入試情報の確認エージェントです。web_searchなどの広範なWeb検索は行わず、ユーザー入力、記録済み参照URL、添付資料、指定サイト ${ALLOWED_REFERENCE_URL} の範囲だけで確認してください。指定範囲で確認できないものはunclearとし、推測で補完しないでください。sourcesには指定範囲内のURLだけを含めてください。`,
+    system: 'あなたは大学院入試情報の調査エージェントです。web_searchで公式サイトを確認し、事実ベースで報告してください。推測は避け、確認できないものはunclearとしてください。',
     messages: [{ role: 'user', content: userContent }],
     tools: []
   };
@@ -209,7 +232,7 @@ export async function verifyInformation(rm){
 export async function adjustRoadmap(roadmap, diagnosis){
   // 既存タスク状態を含めて渡す
   const context = {
-    university: roadmap.university,
+    university: '北海道大学大学院情報科学院修士課程入学試験（情報理工学コース）',
     target: roadmap.target,
     examDate: roadmap.examDate,
     today: todayStr(),
@@ -224,7 +247,9 @@ export async function adjustRoadmap(roadmap, diagnosis){
     }))
   };
 
-  const userContent = `以下のJSONは現在のロードマップと進捗です。残り期間で無理なく合格ラインに到達できるよう調整してください。
+  const userContent = `以下のJSONは北海道大学大学院情報科学院修士課程入学試験（情報理工学コース）の現在のロードマップと進捗です。残り期間で無理なく合格ラインに到達できるよう調整してください。
+
+${HOKUDAI_EXAM_REFERENCE}
 
 ${JSON.stringify(context, null, 2)}`;
 
