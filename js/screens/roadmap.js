@@ -43,7 +43,6 @@ export function renderRoadmap(app, state, actions){
         <div class="box">${CHECK_SVG}</div>
         <div style="display:flex; flex-direction:column; gap:4px; min-width:0;">
           <div class="txt">${esc(t.text)}</div>
-          ${t.subject ? `<div style="font-size:11px; color:#4f46e5;">#${esc(t.subject)}</div>` : ''}
         </div>
         ${editMode ? `<button class="task-del" data-del-task="${esc(t.id)}" data-del-phase="${pi}" title="削除">✕</button>` : ''}
       </div>

@@ -144,11 +144,18 @@ function mergeDoneState(newRoadmap, oldRoadmap){
   }));
   newRoadmap.phases = newRoadmap.phases.map(p => ({
     ...p,
-    tasks: p.tasks.map(t => ({
-      ...t,
-      done: doneTexts.has(t.text),
-      subject: t.subject || subjectByText.get(t.text) || ''
-    }))
+    tasks: p.tasks.map(t => {
+      const existingSubject = subjectByText.get(t.text) || '';
+      const newSubject = typeof t.subject === 'string' ? t.subject.trim() : '';
+      const resolvedSubject = newSubject && newSubject !== 'その他'
+        ? newSubject
+        : existingSubject || newSubject || '';
+      return {
+        ...t,
+        done: doneTexts.has(t.text),
+        subject: resolvedSubject
+      };
+    })
   }));
   return newRoadmap;
 }
