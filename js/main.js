@@ -137,10 +137,18 @@ function getHokudaiUnitIdsFromForm(){
 function mergeDoneState(newRoadmap, oldRoadmap){
   if(!oldRoadmap) return newRoadmap;
   const doneTexts = new Set();
-  oldRoadmap.phases.forEach(p => p.tasks.forEach(t => { if(t.done) doneTexts.add(t.text); }));
+  const subjectByText = new Map();
+  oldRoadmap.phases.forEach(p => p.tasks.forEach(t => {
+    if(t.done) doneTexts.add(t.text);
+    if(t?.text) subjectByText.set(t.text, t.subject || '');
+  }));
   newRoadmap.phases = newRoadmap.phases.map(p => ({
     ...p,
-    tasks: p.tasks.map(t => ({ ...t, done: doneTexts.has(t.text) }))
+    tasks: p.tasks.map(t => ({
+      ...t,
+      done: doneTexts.has(t.text),
+      subject: t.subject || subjectByText.get(t.text) || ''
+    }))
   }));
   return newRoadmap;
 }
@@ -424,7 +432,7 @@ const roadmapActions = {
     const phase = state.roadmap.phases[phaseIdx];
     if(!phase) return;
     const id = `p${phaseIdx}-t${phase.tasks.length}-${Date.now().toString(36)}`;
-    phase.tasks.push({ id, text, done: false, userAdded: true });
+    phase.tasks.push({ id, text, done: false, subject: '', userAdded: true });
     await persist();
     render();
     showToast({ title: 'タスクを追加しました', body: text, type: 'info', duration: 2500 });

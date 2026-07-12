@@ -2,7 +2,7 @@
 
 import { esc, daysUntil } from '../utils.js';
 import { PEAK_SVG, CHECK_SVG } from '../config.js';
-import { computeProgress, diagnose, shouldSuggestReview } from '../progress.js';
+import { computeProgress, diagnose, shouldSuggestReview, computeSubjectProgress } from '../progress.js';
 import { isNotificationSupported } from '../reminders.js';
 
 function pickTodayRecommendation(rm){
@@ -40,7 +40,10 @@ export function renderRoadmap(app, state, actions){
     const tasksHtml = p.tasks.map(t => `
       <div class="task-item ${t.done ? 'done' : ''}" data-task="${esc(t.id)}" data-phase="${pi}">
         <div class="box">${CHECK_SVG}</div>
-        <div class="txt">${esc(t.text)}</div>
+        <div style="display:flex; flex-direction:column; gap:4px; min-width:0;">
+          <div class="txt">${esc(t.text)}</div>
+          ${t.subject ? `<div style="font-size:11px; color:#4f46e5;">#${esc(t.subject)}</div>` : ''}
+        </div>
         ${editMode ? `<button class="task-del" data-del-task="${esc(t.id)}" data-del-phase="${pi}" title="削除">✕</button>` : ''}
       </div>
     `).join('');
@@ -72,7 +75,7 @@ export function renderRoadmap(app, state, actions){
   const reviewBannerHtml = suggestReview ? renderReviewBanner(diag) : '';
   const todayRecommendation = pickTodayRecommendation(rm);
   const todayRecommendationHtml = renderTodayRecommendation(todayRecommendation);
-  const subjectProgressHtml = renderSubjectProgress(rm.subjectProgress);
+  const subjectProgressHtml = renderSubjectProgress(computeSubjectProgress(rm));
 
   const reminderPanelHtml = editMode ? '' : renderReminderPanel(state.settings);
   const sourcesHtml = renderSourcesBlock(rm);

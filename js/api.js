@@ -119,7 +119,11 @@ ${TASK_GRANULARITY_RULES}
       "name": "フェーズ名（例：基礎固め期）",
       "period": "期間の目安（例：7月中旬〜8月末）",
       "goal": "このフェーズで達成すべきことを1文で",
-      "tasks": ["具体的なタスク1", "具体的なタスク2", "具体的なタスク3"]
+      "tasks": [
+        {"text": "具体的なタスク1", "subject": "情報理論"},
+        {"text": "具体的なタスク2", "subject": "アルゴリズムとデータ構造"},
+        {"text": "具体的なタスク3", "subject": "基礎数学"}
+      ]
     }
   ]
 }
@@ -150,14 +154,17 @@ ${TASK_GRANULARITY_RULES}
   "overview": "調整後の学習方針を2〜3文で要約",
   "diagnosis": "現状分析を2〜3文（何が遅れているか / 順調な点 / リスク）",
   "subjectProgress": [
-    {"subject": "情報理論", "progress": 30, "note": "基礎理解は進んでいる"}
+    {"subject": "科目", "progress": 進捗率, "note": "基礎理解は進んでいる"}
   ],
   "phases": [
     {
       "name": "フェーズ名",
       "period": "期間の目安",
       "goal": "このフェーズの到達目標",
-      "tasks": ["タスク1", "タスク2"]
+      "tasks": [
+        {"text": "タスク1", "subject": "情報理論"},
+        {"text": "タスク2", "subject": "アルゴリズムとデータ構造"}
+      ]
     }
   ]
 }
@@ -377,11 +384,19 @@ ${JSON.stringify(context, null, 2)}`;
 
   // 完了済みタスクは可能な限り維持（テキスト一致で紐付け）
   const doneTexts = new Set();
-  roadmap.phases.forEach(p => p.tasks.forEach(t => { if(t.done) doneTexts.add(t.text); }));
+  const existingSubjects = new Map();
+  roadmap.phases.forEach(p => p.tasks.forEach(t => {
+    if(t.done) doneTexts.add(t.text);
+    if(t?.text) existingSubjects.set(t.text, t.subject || '');
+  }));
 
   const newPhases = normalizePhases(parsed.phases).map(p => ({
     ...p,
-    tasks: p.tasks.map(t => ({ ...t, done: doneTexts.has(t.text) }))
+    tasks: p.tasks.map(t => ({
+      ...t,
+      done: doneTexts.has(t.text),
+      subject: t.subject || existingSubjects.get(t.text) || ''
+    }))
   }));
   const subjectProgress = normalizeSubjectProgress(parsed.subjectProgress || roadmap.subjectProgress, newPhases);
 
@@ -528,17 +543,31 @@ function normalizePhases(phases){
     name: p.name || `フェーズ${pi + 1}`,
     period: p.period || '',
     goal: p.goal || '',
-    tasks: (p.tasks || []).map((t, ti) => ({
-      id: `p${pi}-t${ti}-${Date.now().toString(36)}`,
-      text: typeof t === 'string' ? t : (t.text || ''),
-      done: false
-    }))
+    tasks: (p.tasks || []).map((t, ti) => normalizeTask(t, pi, ti))
   }));
+}
+
+function normalizeTask(task, phaseIdx, taskIdx){
+  const text = typeof task === 'string' ? task : (task?.text || '');
+  const subject = normalizeTaskSubject(task);
+  return {
+    id: `p${phaseIdx}-t${taskIdx}-${Date.now().toString(36)}`,
+    text,
+    done: Boolean(task?.done),
+    subject,
+    userAdded: Boolean(task?.userAdded)
+  };
+}
+
+function normalizeTaskSubject(task){
+  if(!task || typeof task === 'string') return '';
+  const raw = String(task?.subject || task?.subjectName || '').trim();
+  return raw;
 }
 
 function normalizeSubjectProgress(subjectProgress, phases){
   if(Array.isArray(subjectProgress) && subjectProgress.length){
-    return subjectProgress
+    const normalized = subjectProgress
       .map(item => {
         const subject = String(item?.subject || item?.name || '').trim();
         if(!subject) return null;
@@ -553,36 +582,26 @@ function normalizeSubjectProgress(subjectProgress, phases){
         };
       })
       .filter(Boolean);
+    if(normalized.length) return normalized;
   }
 
   return inferSubjectProgressFromTasks(phases);
 }
 
 function inferSubjectProgressFromTasks(phases){
-  const subjectPatterns = [
-    ['情報理論', /情報理論/u],
-    ['アルゴリズムとデータ構造', /アルゴリズム|データ構造/u],
-    ['基礎数学', /基礎数学|線形代数|微分積分/u],
-    ['情報数学', /情報数学|論理|言語理論|オートマトン/u],
-    ['確率・統計', /確率|統計/u],
-    ['人工知能', /人工知能|機械学習|ニューラル/u],
-    ['コンピュータシステム', /コンピュータシステム|OS|ネットワーク|アーキテクチャ/u],
-    ['応用数学', /応用数学|微分方程式|フーリエ|複素解析/u]
-  ];
-
   const stats = new Map();
+  const add = (subject, done) => {
+    if(!subject) return;
+    const entry = stats.get(subject) || { total: 0, done: 0 };
+    entry.total += 1;
+    if(done) entry.done += 1;
+    stats.set(subject, entry);
+  };
+
   for(const phase of phases || []){
     for(const task of phase.tasks || []){
-      const text = String(task?.text || '');
-      for(const [subject, pattern] of subjectPatterns){
-        if(pattern.test(text)){
-          const entry = stats.get(subject) || { total: 0, done: 0 };
-          entry.total += 1;
-          if(task?.done) entry.done += 1;
-          stats.set(subject, entry);
-          break;
-        }
-      }
+      const subject = normalizeTaskSubject(task) || inferSubjectFromText(String(task?.text || ''));
+      add(subject, Boolean(task?.done));
     }
   }
 
@@ -590,7 +609,26 @@ function inferSubjectProgressFromTasks(phases){
     .map(([subject, entry]) => ({
       subject,
       progress: entry.total ? Math.round((entry.done / entry.total) * 100) : 0,
-      note: ''
+      note: `${entry.done}/${entry.total} タスク完了`
     }))
     .sort((a, b) => a.subject.localeCompare(b.subject, 'ja'));
+}
+
+function inferSubjectFromText(text){
+  const source = String(text || '').trim();
+  if(!source) return '';
+  const patterns = [
+    ['情報理論', /(情報理論|情報量|エントロピー|相互情報量|通信路|符号)/u],
+    ['アルゴリズムとデータ構造', /(アルゴリズム|データ構造|グラフ|整列|探索|計算量|リスト|キュー|スタック|ヒープ|ハッシュ)/u],
+    ['基礎数学', /(基礎数学|線形代数|微分積分|行列|極限|微分|積分|固有値)/u],
+    ['情報数学', /(情報数学|論理|言語理論|オートマトン|集合|関係|写像|ブール)/u],
+    ['確率・統計', /(確率|統計|分散|期待値|独立|標本分布|仮説検定)/u],
+    ['人工知能', /(人工知能|機械学習|ニューラル|Q学習|探索と推論|ゲーム理論)/u],
+    ['コンピュータシステム', /(コンピュータシステム|OS|ネットワーク|アーキテクチャ|ページング|キャッシュ|DNS|C言語|論理回路)/u],
+    ['応用数学', /(応用数学|微分方程式|ベクトル解析|ラプラス|フーリエ|複素解析)/u]
+  ];
+  for(const [subject, pattern] of patterns){
+    if(pattern.test(source)) return subject;
+  }
+  return '';
 }
