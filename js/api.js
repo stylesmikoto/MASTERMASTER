@@ -270,6 +270,66 @@ ${HOKUDAI_EXAM_REFERENCE}
   return await callAiAndParse(body);
 }
 
+export async function explainTask(rm, taskText){
+  const userContent = `以下のタスクについて、実行手順を初心者にも分かるように具体化してください。
+
+  タスク: ${taskText}
+  試験日: ${rm?.examDate || '未設定'}
+  現在の目標: ${rm?.target || '未設定'}
+
+  ${HOKUDAI_EXAM_REFERENCE}
+  【出力フォーマット】
+  以下のテンプレートに沿って、自然言語（Markdownテキスト）で出力すること。JSONフォーマットは絶対に使用しないこと。
+
+  ■ 目的
+  （このタスクの目的を1〜2文で記述）
+
+  ■ 実行手順
+  1. （ステップ1を記述）
+  2. （ステップ2を記述）
+  （必要に応じてステップを追加、3〜6ステップ程度）
+
+  ■ 完了条件
+  （完了条件を1〜2行で記述）
+
+  ■ よくある失敗
+  （よくある失敗を1〜2行で記述）
+
+  【留意点】
+  北海道大学大学院情報科学院修士課程入学試験（情報理工学コース）向けの文脈で記述すること。`;
+  const body = {
+    model: GEMINI_MODEL,
+    max_tokens: 1800,
+    system: 'あなたは北海道大学大学院情報科学院修士課程入試の学習コーチです。抽象表現を避け、実行可能な手順に具体化してください。',
+    messages: [{ role: 'user', content: userContent }],
+    tools: []
+  };
+
+  const rawResponse = await callAiText(body);
+  try {
+    const parsed = JSON.parse(rawResponse);
+    // JSONキーを展開してテキスト化
+    let formattedText = '';
+    if(parsed["目的"]) formattedText += `■ 目的\n${parsed["目的"]}\n\n`;
+    if(parsed["実行手順"]) {
+      formattedText += `■ 実行手順\n`;
+      if(Array.isArray(parsed["実行手順"])) {
+        parsed["実行手順"].forEach(step => formattedText += `${step}\n`);
+      } else {
+        formattedText += `${parsed["実行手順"]}\n`;
+      }
+      formattedText += `\n`;
+    }
+    if(parsed["完了条件"]) formattedText += `■ 完了条件\n${parsed["完了条件"]}\n\n`;
+    if(parsed["よくある失敗"]) formattedText += `■ よくある失敗\n${parsed["よくある失敗"]}`;
+
+    return formattedText.trim();
+  } catch (e) {
+    // パース失敗時はそのまま返す（予期せぬテキスト応答へのフェールセーフ）
+    return rawResponse;
+  }
+}
+
 // -------- ロードマップ調整 --------
 
 export async function adjustRoadmap(roadmap, diagnosis){
@@ -369,6 +429,36 @@ async function callAiAndParse(body){
     }
     throw new Error('応答の解析に失敗しました。AIの返答がJSON形式ではありませんでした: ' + raw.slice(0, 160));
   }
+}
+
+async function callAiText(body){
+  let response;
+  try {
+    response = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+  } catch(e){
+    throw new Error('API proxy is not reachable. Start the local server with GEMINI_API_KEY set.');
+  }
+
+  if(!response.ok){
+    let detail = '';
+    try {
+      const errorBody = await response.json();
+      detail = formatApiError(errorBody);
+    } catch(_) {
+      detail = await response.text().catch(() => '');
+    }
+    throw new Error(`API call failed (${response.status})${detail ? ': ' + detail : ''}`);
+  }
+
+  const data = await response.json();
+  const textBlocks = (data.content || []).filter(b => b.type === 'text');
+  if(!textBlocks.length) throw new Error('応答が空でした');
+
+  return textBlocks.map(b => b.text).join('\n').trim();
 }
 
 function cleanJsonLikeText(text){

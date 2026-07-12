@@ -682,6 +682,77 @@ h1,h2,h3{ font-family:"Shippori Mincho", serif; margin:0; }
 }
 .btn-mini:hover{ background:var(--moss); }
 
+/* ---------- TASK ACTION POPUP ---------- */
+.task-popup-overlay{
+  position:fixed;
+  inset:0;
+  z-index:1100;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+  background:rgba(10, 18, 26, 0.56);
+  backdrop-filter:blur(2px);
+}
+.task-popup{
+  width:min(680px, 100%);
+  max-height:min(80vh, 760px);
+  overflow:auto;
+  border-radius:10px;
+  border:1px solid var(--navy-line);
+  background:var(--navy-mid);
+  color:var(--paper);
+  box-shadow:0 20px 38px -22px rgba(0,0,0,0.8);
+  padding:18px 18px 16px;
+  position:relative;
+}
+.task-popup-close{
+  position:absolute;
+  top:8px;
+  right:10px;
+  border:none;
+  background:none;
+  color:var(--slate);
+  font-size:20px;
+  line-height:1;
+  cursor:pointer;
+}
+.task-popup-close:hover{ color:var(--paper); }
+.task-popup-title{
+  color:var(--amber);
+  font-size:11px;
+  letter-spacing:0.06em;
+  text-transform:uppercase;
+  font-weight:700;
+}
+.task-popup-task{
+  margin-top:8px;
+  color:var(--paper);
+  line-height:1.7;
+  font-size:14px;
+  padding:10px 12px;
+  border-radius:6px;
+  border:1px solid var(--navy-line);
+  background:rgba(255,255,255,0.03);
+}
+.task-popup-actions{
+  margin-top:12px;
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+.task-popup-result{
+  margin-top:12px;
+  white-space:pre-wrap;
+  border-radius:6px;
+  border:1px solid rgba(110,140,92,0.5);
+  background:rgba(110,140,92,0.1);
+  color:var(--paper);
+  padding:12px;
+  font-size:13px;
+  line-height:1.8;
+}
+
 /* ---------- SOURCES BLOCK ---------- */
 .sources-block{
   margin-top:14px; padding:10px 12px; border-radius:6px;
