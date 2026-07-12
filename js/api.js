@@ -356,32 +356,27 @@ ${HOKUDAI_EXAM_REFERENCE}
 }
 
 export async function explainTask(rm, taskText){
-  const userContent = `以下のタスクについて、実行手順を初心者にも分かるように具体化してください。
+  const userContent = `以下のタスクについて、北海道大学大学院情報科学院修士課程入学試験（情報理工学コース）向けに、初心者にも分かるよう具体化してください。
 
-  タスク: ${taskText}
-  試験日: ${rm?.examDate || '未設定'}
-  現在の目標: ${rm?.target || '未設定'}
+タスク: ${taskText}
+試験日: ${rm?.examDate || '未設定'}
+現在の目標: ${rm?.target || '未設定'}
 
-  ${HOKUDAI_EXAM_REFERENCE}
-  【出力フォーマット】
-  以下のテンプレートに沿って、自然言語（Markdownテキスト）で出力すること。JSONフォーマットは絶対に使用しないこと。
+${HOKUDAI_EXAM_REFERENCE}
 
-  ■ 目的
-  （このタスクの目的を1〜2文で記述）
+出力は必ず次のJSON形式のみとし、前置きや説明文は一切含めないでください。
+{
+  "purpose": "このタスクの目的を1〜2文で説明",
+  "steps": ["実行手順1", "実行手順2", "実行手順3"],
+  "completion": ["完了条件1", "完了条件2"],
+  "mistakes": ["よくある失敗1", "よくある失敗2"]
+}
 
-  ■ 実行手順
-  1. （ステップ1を記述）
-  2. （ステップ2を記述）
-  （必要に応じてステップを追加、3〜6ステップ程度）
-
-  ■ 完了条件
-  （完了条件を1〜2行で記述）
-
-  ■ よくある失敗
-  （よくある失敗を1〜2行で記述）
-
-  【留意点】
-  北海道大学大学院情報科学院修士課程入学試験（情報理工学コース）向けの文脈で記述すること。`;
+制約:
+- steps は 3〜6 個
+- completion と mistakes は 1〜3 個
+- 抽象語だけで終わらせず、すぐ実行できる粒度で書く
+- 北海道大学の文脈に沿わせるが、タスク本文にない固有情報は捏造しない`;
   const body = {
     model: GEMINI_MODEL,
     max_tokens: 1800,
@@ -391,28 +386,7 @@ export async function explainTask(rm, taskText){
   };
 
   const rawResponse = await callAiText(body);
-  try {
-    const parsed = JSON.parse(rawResponse);
-    // JSONキーを展開してテキスト化
-    let formattedText = '';
-    if(parsed["目的"]) formattedText += `■ 目的\n${parsed["目的"]}\n\n`;
-    if(parsed["実行手順"]) {
-      formattedText += `■ 実行手順\n`;
-      if(Array.isArray(parsed["実行手順"])) {
-        parsed["実行手順"].forEach(step => formattedText += `${step}\n`);
-      } else {
-        formattedText += `${parsed["実行手順"]}\n`;
-      }
-      formattedText += `\n`;
-    }
-    if(parsed["完了条件"]) formattedText += `■ 完了条件\n${parsed["完了条件"]}\n\n`;
-    if(parsed["よくある失敗"]) formattedText += `■ よくある失敗\n${parsed["よくある失敗"]}`;
-
-    return formattedText.trim();
-  } catch (e) {
-    // パース失敗時はそのまま返す（予期せぬテキスト応答へのフェールセーフ）
-    return rawResponse;
-  }
+  return formatTaskExplanation(rawResponse);
 }
 
 // -------- ロードマップ調整 --------
@@ -573,6 +547,46 @@ async function callAiText(body){
   if(!textBlocks.length) throw new Error('応答が空でした');
 
   return textBlocks.map(b => b.text).join('\n').trim();
+}
+
+function formatTaskExplanation(rawResponse){
+  const cleaned = cleanJsonLikeText(rawResponse);
+  if(!cleaned) return rawResponse?.trim() || '';
+
+  try {
+    const parsed = JSON.parse(cleaned);
+    if(parsed && typeof parsed === 'object' && !Array.isArray(parsed)){
+      const sections = [];
+      const purpose = parsed.purpose || parsed.目的;
+      const steps = parsed.steps || parsed.実行手順;
+      const completion = parsed.completion || parsed.完了条件;
+      const mistakes = parsed.mistakes || parsed.よくある失敗;
+
+      if(purpose) sections.push(`■ 目的\n${purpose}`);
+      if(Array.isArray(steps) && steps.length){
+        sections.push(`■ 実行手順\n${steps.map((step, index) => `${index + 1}. ${step}`).join('\n')}`);
+      } else if(steps){
+        sections.push(`■ 実行手順\n${steps}`);
+      }
+      if(Array.isArray(completion) && completion.length){
+        sections.push(`■ 完了条件\n${completion.map((item, index) => `${index + 1}. ${item}`).join('\n')}`);
+      } else if(completion){
+        sections.push(`■ 完了条件\n${completion}`);
+      }
+      if(Array.isArray(mistakes) && mistakes.length){
+        sections.push(`■ よくある失敗\n${mistakes.map((item, index) => `${index + 1}. ${item}`).join('\n')}`);
+      } else if(mistakes){
+        sections.push(`■ よくある失敗\n${mistakes}`);
+      }
+
+      const text = sections.join('\n\n').trim();
+      return text || rawResponse.trim();
+    }
+  } catch(_){
+    // JSONでなければそのまま返す
+  }
+
+  return cleaned || rawResponse.trim();
 }
 
 function cleanJsonLikeText(text){
