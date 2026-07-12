@@ -2,7 +2,7 @@
 
 import { esc, daysUntil } from '../utils.js';
 import { PEAK_SVG, CHECK_SVG } from '../config.js';
-import { computeProgress, diagnose, shouldSuggestReview } from '../progress.js';
+import { computeProgress, diagnose, shouldSuggestReview, computeGouStatus } from '../progress.js';
 import { isNotificationSupported } from '../reminders.js';
 
 function pickTodayRecommendation(rm){
@@ -25,6 +25,7 @@ export function renderRoadmap(app, state, actions){
   const rm = state.roadmap;
   const prog = computeProgress(rm);
   const diag = diagnose(rm);
+  const gouStatus = computeGouStatus(prog.pct);
   const dleft = daysUntil(rm.examDate);
   const editMode = !!state.editMode;
 
@@ -105,11 +106,16 @@ export function renderRoadmap(app, state, actions){
         <div class="progress-fill" style="width:${prog.pct}%"></div>
         ${diag.expectedPct != null ? `<div class="progress-expected" style="left:${diag.expectedPct}%" title="想定進捗 ${diag.expectedPct}%"></div>` : ''}
       </div>
+      <div class="gou-badge">
+        <span class="gou-icon">⛰️</span>
+        <span class="gou-text">現在地: <strong>${esc(gouStatus.label)}</strong></span>
+      </div>
 
       ${reviewBannerHtml}
       ${todayRecommendationHtml}
 
       <div class="trail">
+        <div class="mountain-silhouette"></div>
         <div class="trail-line"></div>
         ${phasesHtml}
         <div class="checkpoint summit">

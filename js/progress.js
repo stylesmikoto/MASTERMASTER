@@ -119,6 +119,15 @@ export function diagnosisText(diag){
   return `想定進捗に沿っています（想定 ${diag.expectedPct}% / 実際 ${diag.actualPct}%）。`;
 }
 
+// 進捗率から「何合目」かを算出（登山コンセプトの表示用）
+const GOU_KANJI = ['', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十'];
+export function computeGouStatus(pct){
+  const gou = Math.max(0, Math.min(10, Math.floor(pct / 10)));
+  if(gou <= 0) return { gou, label: '麓 — スタート地点' };
+  if(gou >= 10) return { gou, label: '山頂到達！' };
+  return { gou, label: `${GOU_KANJI[gou]}合目` };
+}
+
 // 今日おすすめの未完了タスク（各フェーズの先頭から少しずつ）
 export function pickTodaysTasks(rm, max = 3){
   const undone = [];

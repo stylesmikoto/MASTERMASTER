@@ -14,6 +14,7 @@ export function renderForm(app, state, actions){
   app.innerHTML = `
     <div class="shell">
       <div class="brandbar">${PEAK_SVG}<span>登山届 — 北大院 情報理工学コース 専用ロードマップ</span></div>
+      <div class="sky-hero"><div class="sky-hero-mountains"></div></div>
       <div class="permit-card">
         <div class="permit-head">
           <div class="permit-title">${isEditing ? '入力・条件を編集する' : '北大院合格への最短ルートを。'}</div>
