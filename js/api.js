@@ -4,6 +4,7 @@ import { GEMINI_MODEL } from './config.js';
 import { todayStr } from './utils.js';
 
 const API_URL = '/api/gemini';
+const ALLOWED_REFERENCE_URL = 'https://abigworld1.github.io/grad_exam.html';
 
 // -------- プロンプト生成 --------
 
@@ -28,22 +29,23 @@ ${f.customInstructions.trim()}`;
   return base;
 }
 
-// 新規作成用のシステムプロンプト。Web検索の使用を明示的に指示。
+// 新規作成用のシステムプロンプト。参照先を限定してトークン消費を抑える。
 const SYSTEM_GENERATE = `あなたは大学院入試（院試）対策に精通した学習コーチです。学生から与えられた情報をもとに、今日から試験日までの現実的な学習ロードマップを作成してください。
 
-【重要】まず必要に応じてweb_searchツールを使い、以下を確認してから設計してください:
-- 志望大学院・専攻の公式サイトや募集要項（試験科目・配点・過去問公開状況）
-- 過去に公開されている過去問や対策情報
-- 指定された研究室・作問者の研究分野
-- ユーザーが提示した情報が古くないか、現在も有効か
-
-検索は必須ではありませんが、大学名・研究室名が明示されている場合は原則1〜3回の検索で裏取りしてください。
+【参照ルール】
+- web_searchなどの広範なWeb検索は行わないこと。
+- 参照してよい情報源は、ユーザーが入力・添付した過去問や資料、および次のサイトだけです: ${ALLOWED_REFERENCE_URL}
+- 上記以外の大学公式サイト、募集要項、個人ブログ、検索結果、推測上のURLは参照しないこと。
+- 指定サイトや添付資料から確認できない事項は、断定せず「入力情報からは不明」として扱うこと。
+- sourcesには、ユーザーが入力した過去問URL、添付資料名、または ${ALLOWED_REFERENCE_URL} のみを含めること。
 
 出力は必ず以下のJSON形式のみとし、前置きや後置きの文章、Markdownのコードブロック記号（\`\`\`）は一切含めないでください。JSON以外の文字を1文字も出力しないこと。
+値が不明でも説明文をJSONの外に書かず、必ずJSON内の文字列として表現してください。
+phasesは必ず1件以上含めてください。
 
 {
-  "overview": "全体の学習方針を2〜3文で要約した文章。Web検索で得た情報があればそれを反映する",
-  "sources": ["参照した公式サイト等のURL（あれば）"],
+  "overview": "全体の学習方針を2〜3文で要約した文章。入力資料と指定サイトの範囲で確認できる情報を反映する",
+  "sources": ["参照した過去問URL・添付資料名・指定サイトURL（あれば）"],
   "phases": [
     {
       "name": "フェーズ名（例：基礎固め期）",
@@ -60,7 +62,8 @@ const SYSTEM_GENERATE = `あなたは大学院入試（院試）対策に精通�
 - 過去問の傾向・作問者の情報・目標点数があれば優先順位に反映する
 - 苦手科目や使える時間などの自由記述があれば配分に反映する
 - 最後のフェーズは試験直前期（総仕上げ・過去問演習・体調管理など）にする
-- 添付資料（過去問PDF等）があれば内容を精読し、タスクに具体的に反映する`;
+- 添付資料（過去問PDF等）があれば内容を精読し、タスクに具体的に反映する
+- 参照先を広げず、少ない根拠で過度に詳しい制度情報を作らない`;
 
 // ロードマップ調整用のシステムプロンプト
 const SYSTEM_ADJUST = `あなたは大学院入試（院試）対策に精通した学習コーチです。既存のロードマップと現在の進捗状況をもとに、残り期間のロードマップを再調整してください。
@@ -136,6 +139,10 @@ export async function generateRoadmap(form){
   };
 
   const parsed = await callAiAndParse(body);
+  const phases = normalizePhases(parsed.phases);
+  if(!phases.length){
+    throw new Error('AIの応答にロードマップのphasesが含まれていませんでした。もう一度作成してください。');
+  }
 
   return {
     overview: parsed.overview || '',
@@ -156,21 +163,24 @@ export async function generateRoadmap(form){
       freeNote: form.freeNote,
       customInstructions: form.customInstructions || ''
     },
-    phases: normalizePhases(parsed.phases)
+    phases
   };
 }
 
-// -------- Web情報の再検証 (既存Webサイト・情報の確認) --------
+// -------- 参照情報の再確認 (参照先限定) --------
 
 export async function verifyInformation(rm){
   const target = rm.university;
-  const userContent = `以下の大学院入試について、最新の公式情報を確認してください。web_searchツールを2〜3回使い、以下を調査してください:
+  const userContent = `以下の大学院入試について、入力済み情報と指定サイトの範囲だけで再確認してください。広範なWeb検索は行わないでください。
 - 志望大学院・専攻: ${target}
 - 記録されている試験日: ${rm.examDate}
 - 記録されている試験科目: ${rm.originalInputs?.subjects || '未記入'}
 - 記録されている研究室情報: ${rm.originalInputs?.examiner || '未記入'}
+- 参照してよい指定サイト: ${ALLOWED_REFERENCE_URL}
+- 記録されている参照URL: ${(rm.sources || []).join(', ') || 'なし'}
 
-各項目について、現時点の公式情報と一致しているか、または更新があるかを確認してください。
+各項目について、入力済み情報・過去問URL・指定サイトの範囲で一致しているか確認してください。
+確認できない項目は推測せず unclear にしてください。
 
 出力は必ず以下のJSON形式のみ:
 
@@ -186,7 +196,7 @@ export async function verifyInformation(rm){
   const body = {
     model: GEMINI_MODEL,
     max_tokens: 2500,
-    system: 'あなたは大学院入試情報の調査エージェントです。web_searchで公式サイトを確認し、事実ベースで報告してください。推測は避け、確認できないものはunclearとしてください。',
+    system: `あなたは大学院入試情報の確認エージェントです。web_searchなどの広範なWeb検索は行わず、ユーザー入力、記録済み参照URL、添付資料、指定サイト ${ALLOWED_REFERENCE_URL} の範囲だけで確認してください。指定範囲で確認できないものはunclearとし、推測で補完しないでください。sourcesには指定範囲内のURLだけを含めてください。`,
     messages: [{ role: 'user', content: userContent }],
     tools: []
   };
@@ -276,23 +286,57 @@ async function callAiAndParse(body){
   if(!textBlocks.length) throw new Error('応答が空でした');
 
   const fullText = textBlocks.map(b => b.text).join('\n').trim();
-  const raw = fullText
-    .replace(/^```json\s*/i, '')
-    .replace(/^```\s*/, '')
-    .replace(/```\s*$/, '');
+  const raw = cleanJsonLikeText(fullText);
 
   try {
-    return JSON.parse(raw);
+    return normalizeParsedResponse(JSON.parse(raw));
   } catch(e){
-    // JSON前後にテキストが混ざっている場合、最初の { から最後の } を抽出
-    const start = raw.indexOf('{');
-    const end = raw.lastIndexOf('}');
-    if(start >= 0 && end > start){
-      try { return JSON.parse(raw.slice(start, end + 1)); }
-      catch(_){ /* fallthrough */ }
+    const candidates = extractJsonCandidates(raw);
+    for(const candidate of candidates){
+      try {
+        return normalizeParsedResponse(JSON.parse(candidate));
+      } catch(_){
+        // 次の候補を試す
+      }
     }
-    throw new Error('応答の解析に失敗しました');
+    throw new Error('応答の解析に失敗しました。AIの返答がJSON形式ではありませんでした: ' + raw.slice(0, 160));
   }
+}
+
+function cleanJsonLikeText(text){
+  return String(text || '')
+    .trim()
+    .replace(/^\uFEFF/, '')
+    .replace(/^```(?:json)?\s*/i, '')
+    .replace(/```\s*$/i, '')
+    .trim()
+    .replace(/^json\s*/i, '')
+    .trim();
+}
+
+function extractJsonCandidates(text){
+  const candidates = [];
+  addCandidateBetween(text, '{', '}', candidates);
+  addCandidateBetween(text, '[', ']', candidates);
+  return candidates;
+}
+
+function addCandidateBetween(text, open, close, candidates){
+  const start = text.indexOf(open);
+  const end = text.lastIndexOf(close);
+  if(start >= 0 && end > start){
+    candidates.push(text.slice(start, end + 1));
+  }
+}
+
+function normalizeParsedResponse(parsed){
+  if(Array.isArray(parsed)){
+    return { overview: '', sources: [], phases: parsed };
+  }
+  if(parsed?.roadmap && typeof parsed.roadmap === 'object'){
+    return parsed.roadmap;
+  }
+  return parsed;
 }
 
 function formatApiError(errorBody){

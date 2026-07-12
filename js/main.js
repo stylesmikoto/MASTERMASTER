@@ -11,9 +11,21 @@ import {
 } from './reminders.js';
 
 import { renderForm } from './screens/form.js';
+import {
+  buildHokudaiDiagnosticFormPatch,
+  createHokudaiDiagnosticState,
+  renderHokudaiDiagnosticResult,
+  renderHokudaiDiagnosticTestScreen,
+  renderHokudaiUnitSelection
+} from './screens/hokudaiDiagnostic.js';
 import { renderLoading, renderInit } from './screens/loading.js';
 import { renderRoadmap } from './screens/roadmap.js';
 import { renderReview } from './screens/review.js';
+import {
+  getRequiredHokudaiUnitIds,
+  validateHokudaiUnitSelection
+} from './features/hokudaiUnits.js';
+import { scoreHokudaiDiagnosticTest } from './features/hokudaiDiagnosticTest.js';
 
 const app = document.getElementById('app');
 
@@ -28,6 +40,12 @@ const state = {
   editingInputs: false,    // 既存ロードマップの入力を編集中か
   editMode: false,         // タスク編集モード
   roadmap: null,
+  hokudai: {
+    selectedUnitIds: [...getRequiredHokudaiUnitIds(), 'probability_statistics'],
+    test: null,
+    answers: {},
+    result: null
+  },
   settings: {
     reminder: { enabled: false, time: '09:00', lastFiredDate: null }
   },
@@ -40,17 +58,20 @@ const state = {
 function render(){
   if(state.screen === 'loadingInit') return renderInit(app);
   if(state.screen === 'form') return renderForm(app, state, formActions);
+  if(state.screen === 'hokudaiUnits') return renderHokudaiUnitSelection(app, state, hokudaiActions);
+  if(state.screen === 'hokudaiTest') return renderHokudaiDiagnosticTestScreen(app, state, hokudaiActions);
+  if(state.screen === 'hokudaiResult') return renderHokudaiDiagnosticResult(app, state, hokudaiActions);
   if(state.screen === 'generating') return renderLoading(app, {
     title: state.editingInputs ? 'ロードマップを再生成中…' : 'ルートを設計しています…',
-    msg: 'Web検索と過去問資料を確認しながらフェーズを組み立て中です'
+    msg: '入力資料と指定サイトの範囲でフェーズを組み立て中です'
   });
   if(state.screen === 'adjusting') return renderLoading(app, {
     title: 'ロードマップを再構築しています…',
     msg: '現在の進捗をもとに残り期間のタスクを再構成しています'
   });
   if(state.screen === 'verifying') return renderLoading(app, {
-    title: 'Web情報を確認しています…',
-    msg: '公式サイトを参照して最新情報を照合中です'
+    title: '参照情報を確認しています…',
+    msg: '入力済み資料と指定サイトの範囲で照合中です'
   });
   if(state.screen === 'roadmap') return renderRoadmap(app, state, roadmapActions);
   if(state.screen === 'review') return renderReview(app, state, reviewActions);
@@ -91,6 +112,11 @@ function mergeDoneState(newRoadmap, oldRoadmap){
 
 const formActions = {
   rerender: render,
+  onStartHokudaiDiagnostic: () => {
+    state.error = null;
+    state.screen = 'hokudaiUnits';
+    render();
+  },
   onSubmit: async () => {
     readFormValues();
     state.error = null;
@@ -136,6 +162,105 @@ const formActions = {
       customInstructions: '', attachments: []
     };
     render();
+  }
+};
+
+// ---------- Hokudai Diagnostic Actions ----------
+
+const hokudaiActions = {
+  onToggleUnit: (unitId, checked, mode) => {
+    const required = new Set(getRequiredHokudaiUnitIds());
+    const current = new Set(state.hokudai.selectedUnitIds || []);
+    if(required.has(unitId)) return;
+
+    if(mode === 'single'){
+      current.delete('probability_statistics');
+      current.delete('information_theory');
+      if(checked) current.add(unitId);
+    } else if(checked){
+      current.add(unitId);
+    } else {
+      current.delete(unitId);
+    }
+
+    required.forEach(id => current.add(id));
+    state.hokudai.selectedUnitIds = [...current];
+    state.hokudai.test = null;
+    state.hokudai.answers = {};
+    state.hokudai.result = null;
+    state.error = null;
+    render();
+  },
+  onStartTest: () => {
+    const validation = validateHokudaiUnitSelection(state.hokudai.selectedUnitIds);
+    if(!validation.ok){
+      state.error = validation.errors.join(' / ');
+      render();
+      return;
+    }
+    state.hokudai = {
+      ...state.hokudai,
+      ...createHokudaiDiagnosticState(validation.selectedUnitIds),
+      selectedUnitIds: validation.selectedUnitIds
+    };
+    state.error = null;
+    state.screen = 'hokudaiTest';
+    render();
+  },
+  onAnswer: (questionId, answerId) => {
+    state.hokudai.answers = {
+      ...(state.hokudai.answers || {}),
+      [questionId]: answerId
+    };
+  },
+  onScoreTest: () => {
+    const test = state.hokudai.test;
+    const answers = state.hokudai.answers || {};
+    const unanswered = (test?.questions || []).filter(question => !answers[question.id]);
+    if(unanswered.length){
+      state.error = `未回答の問題が ${unanswered.length} 問あります。すべて回答してください。`;
+      render();
+      return;
+    }
+    state.hokudai.result = scoreHokudaiDiagnosticTest(test, answers);
+    state.error = null;
+    state.screen = 'hokudaiResult';
+    render();
+  },
+  onBackToUnits: () => {
+    state.screen = 'hokudaiUnits';
+    state.error = null;
+    render();
+  },
+  onBackToForm: () => {
+    state.screen = 'form';
+    state.error = null;
+    render();
+  },
+  onRetake: () => {
+    const diagnosticState = createHokudaiDiagnosticState(state.hokudai.selectedUnitIds);
+    state.hokudai = {
+      ...state.hokudai,
+      ...diagnosticState
+    };
+    state.error = null;
+    state.screen = 'hokudaiTest';
+    render();
+  },
+  onApplyToForm: () => {
+    const patch = buildHokudaiDiagnosticFormPatch(state.hokudai, state.form);
+    state.form = {
+      ...state.form,
+      ...patch
+    };
+    state.screen = 'form';
+    state.error = null;
+    render();
+    showToast({
+      title: '診断結果を反映しました',
+      body: '北大向けの志望先・科目・診断メモを入力フォームへ入れました。',
+      type: 'info'
+    });
   }
 };
 
@@ -209,7 +334,7 @@ const roadmapActions = {
       render();
       const changed = (result.findings || []).filter(f => f.status === 'changed').length;
       showToast({
-        title: 'Web情報の確認が完了',
+        title: '参照情報の確認が完了',
         body: changed > 0 ? `${changed}件の変更を検出しました` : (result.summary || '大きな変更はありません'),
         type: changed > 0 ? 'warn' : 'info',
         duration: 8000

@@ -103,7 +103,7 @@ export function renderRoadmap(app, state, actions){
           ? `<button class="btn-accent" id="btn-toggle-edit">✓ 編集を終了</button>`
           : `<button class="btn-ghost" id="btn-toggle-edit">✏️ タスクを編集</button>
              <button class="btn-ghost" id="btn-edit-inputs">📝 入力を編集して再生成</button>
-             <button class="btn-ghost" id="btn-verify">🔍 Web情報を再確認</button>
+             <button class="btn-ghost" id="btn-verify">🔍 参照情報を再確認</button>
              <button class="btn-ghost" id="btn-review">📊 進捗レビュー</button>
              <button class="btn-ghost" id="btn-restart">最初から作り直す</button>`}
       </div>
@@ -175,12 +175,12 @@ function renderReminderPanel(settings){
 
 function renderSourcesBlock(rm){
   if(!rm.sources || !rm.sources.length){
-    return `<div class="sources-block empty">Web参照情報なし</div>`;
+    return `<div class="sources-block empty">参照情報なし</div>`;
   }
   const verifiedAt = rm.verifiedAt ? `<span class="verified-at">最終確認: ${esc(rm.verifiedAt)}</span>` : '';
   return `
     <div class="sources-block">
-      <div class="sources-label">📎 Web参照情報 ${verifiedAt}</div>
+      <div class="sources-label">📎 参照情報 ${verifiedAt}</div>
       <ul class="sources-list">
         ${rm.sources.slice(0, 5).map(s => `
           <li><a href="${esc(s)}" target="_blank" rel="noopener">${esc(shortUrl(s))}</a></li>

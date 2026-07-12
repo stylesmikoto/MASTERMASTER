@@ -19,9 +19,19 @@ export function renderForm(app, state, actions){
           <div class="permit-title">${isEditing ? '入力・条件を編集する' : '大きな目標を、小さな一歩に。'}</div>
           <div class="permit-sub">${isEditing
             ? '入力内容を更新して、ロードマップを再生成します。<br>完了済みのタスクは可能な限り引き継がれます。'
-            : '院試という山の"登山届"です。行き先とルート、今の自分の状態を教えてください。<br>AIがWeb検索であなたの志望大学院の情報を確認し、専用の合格までのロードマップを作成します。'}</div>
+            : '院試という山の"登山届"です。行き先とルート、今の自分の状態を教えてください。<br>AIが入力資料と指定サイトの範囲で情報を確認し、専用の合格までのロードマップを作成します。'}</div>
         </div>
         <div class="permit-body">
+          ${!isEditing ? `
+            <div class="hokudai-entry">
+              <div>
+                <div class="hokudai-entry-title">北海道大学 情報科学院 情報理工学コース向け</div>
+                <div class="hokudai-entry-sub">受験単元を選び、各単元3問の診断テストで習熟度を確認できます。結果はロードマップ入力に反映できます。</div>
+              </div>
+              <button class="btn-primary-light" id="btn-hokudai-diagnostic">診断を始める</button>
+            </div>
+          ` : ''}
+
           <div class="field">
             <label>志望大学院・専攻 <span class="req">必須</span></label>
             <input id="f-university" type="text" placeholder="例：〇〇大学大学院 情報理工学系研究科" value="${esc(f.university)}"/>
@@ -82,7 +92,7 @@ export function renderForm(app, state, actions){
           <div class="submit-row">
             <button class="btn-primary" id="btn-generate">${isEditing ? '再生成する →' : 'ロードマップを作成する →'}</button>
             ${isEditing ? '<button class="btn-secondary-light" id="btn-cancel-edit">キャンセル</button>' : ''}
-            <span class="hint-small">Web検索で情報を確認しつつAIがタスクを分割します</span>
+            <span class="hint-small">入力資料と指定サイトをもとにAIがタスクを分割します</span>
           </div>
           ${state.error ? `<div class="error-box">${esc(state.error)}</div>` : ''}
         </div>
@@ -91,6 +101,8 @@ export function renderForm(app, state, actions){
   `;
 
   document.getElementById('btn-generate').addEventListener('click', actions.onSubmit);
+  const hokudaiBtn = document.getElementById('btn-hokudai-diagnostic');
+  if(hokudaiBtn) hokudaiBtn.addEventListener('click', actions.onStartHokudaiDiagnostic);
   const cancelBtn = document.getElementById('btn-cancel-edit');
   if(cancelBtn) cancelBtn.addEventListener('click', actions.onCancelEdit);
 

@@ -129,6 +129,272 @@ h1,h2,h3{ font-family:"Shippori Mincho", serif; margin:0; }
   color:var(--clay); font-size:13px; line-height:1.6;
 }
 
+/* ---------- HOKUDAI DIAGNOSTIC ---------- */
+.hokudai-entry{
+  margin-bottom:22px;
+  padding:16px;
+  border:1px solid rgba(79,105,66,0.32);
+  border-radius:6px;
+  background:rgba(110,140,92,0.10);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+}
+.hokudai-entry-title{
+  font-size:14px;
+  font-weight:800;
+  color:var(--ink);
+}
+.hokudai-entry-sub{
+  margin-top:4px;
+  color:var(--ink-soft);
+  font-size:12.5px;
+  line-height:1.7;
+}
+.hokudai-stepbar{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  margin-bottom:18px;
+}
+.hokudai-stepbar span{
+  border:1px solid rgba(28,43,58,0.18);
+  border-radius:4px;
+  padding:7px 10px;
+  color:var(--ink-soft);
+  font-size:12px;
+  font-weight:700;
+  background:rgba(255,255,255,0.35);
+}
+.hokudai-stepbar span.active{
+  background:var(--ink);
+  color:var(--paper);
+  border-color:var(--ink);
+}
+.hokudai-unit-group{
+  margin-top:20px;
+}
+.hokudai-section-title{
+  color:var(--ink);
+  font-size:14px;
+  font-weight:800;
+  font-family:"Shippori Mincho",serif;
+}
+.hokudai-unit-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+  margin-top:10px;
+}
+.hokudai-unit-card{
+  display:flex;
+  gap:10px;
+  align-items:flex-start;
+  padding:12px;
+  border:1px solid rgba(28,43,58,0.16);
+  border-radius:6px;
+  background:rgba(255,255,255,0.44);
+  cursor:pointer;
+}
+.hokudai-unit-card.selected{
+  border-color:var(--moss-deep);
+  background:rgba(110,140,92,0.14);
+}
+.hokudai-unit-card.required{
+  cursor:default;
+}
+.hokudai-unit-card input{
+  margin-top:3px;
+  accent-color:var(--moss-deep);
+}
+.hokudai-unit-card strong{
+  display:block;
+  font-size:13.5px;
+  color:var(--ink);
+}
+.hokudai-unit-card small{
+  display:block;
+  margin-top:4px;
+  color:var(--ink-soft);
+  font-size:12px;
+  line-height:1.55;
+}
+.hokudai-warning{
+  margin-top:12px;
+  padding:10px 12px;
+  border-radius:4px;
+  border:1px solid rgba(217,164,65,0.45);
+  background:rgba(217,164,65,0.12);
+  color:var(--amber-deep);
+  font-size:12.5px;
+  line-height:1.6;
+}
+.hokudai-question-list{
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+}
+.hokudai-question{
+  padding:14px;
+  border-radius:6px;
+  border:1px solid rgba(28,43,58,0.14);
+  background:rgba(255,255,255,0.45);
+}
+.hokudai-question-meta{
+  color:var(--moss-deep);
+  font-size:11.5px;
+  font-weight:800;
+  letter-spacing:0.04em;
+}
+.hokudai-question-prompt{
+  margin-top:6px;
+  color:var(--ink);
+  font-size:14px;
+  line-height:1.7;
+  font-weight:700;
+}
+.hokudai-options{
+  display:grid;
+  gap:8px;
+  margin-top:12px;
+}
+.hokudai-option{
+  display:flex;
+  align-items:flex-start;
+  gap:9px;
+  padding:9px 10px;
+  border:1px solid rgba(28,43,58,0.14);
+  border-radius:4px;
+  background:rgba(255,255,255,0.5);
+  cursor:pointer;
+  color:var(--ink);
+  font-size:13px;
+  line-height:1.6;
+}
+.hokudai-option.selected{
+  border-color:var(--moss-deep);
+  background:rgba(110,140,92,0.13);
+}
+.hokudai-option input{
+  margin-top:4px;
+  accent-color:var(--moss-deep);
+}
+.hokudai-result-layout{
+  display:grid;
+  grid-template-columns:minmax(260px, 1fr) minmax(240px, 0.9fr);
+  gap:18px;
+  align-items:center;
+}
+.hokudai-radar-wrap{
+  display:flex;
+  justify-content:center;
+  min-width:0;
+}
+.hokudai-score-list{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+.hokudai-score-row{
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  padding:10px 12px;
+  border-radius:6px;
+  background:rgba(255,255,255,0.46);
+  border:1px solid rgba(28,43,58,0.12);
+}
+.hokudai-score-row strong{
+  display:block;
+  color:var(--ink);
+  font-size:13px;
+}
+.hokudai-score-row span{
+  display:block;
+  margin-top:3px;
+  color:var(--ink-soft);
+  font-size:11.5px;
+}
+.hokudai-score-row b{
+  color:var(--moss-deep);
+  font-size:18px;
+  font-family:"Shippori Mincho",serif;
+}
+.hokudai-focus{
+  margin-top:20px;
+}
+.hokudai-focus-item{
+  margin-top:8px;
+  padding:11px 12px;
+  border-radius:6px;
+  border:1px solid rgba(28,43,58,0.12);
+  background:rgba(255,255,255,0.42);
+}
+.hokudai-focus-item strong{
+  color:var(--ink);
+  font-size:13px;
+}
+.hokudai-focus-item span{
+  margin-left:8px;
+  color:var(--clay);
+  font-weight:800;
+  font-size:12px;
+}
+.hokudai-focus-item p{
+  margin:5px 0 0;
+  color:var(--ink-soft);
+  font-size:12.5px;
+  line-height:1.6;
+}
+.hokudai-answer-review{
+  margin-top:18px;
+  padding:12px 14px;
+  border-radius:6px;
+  border:1px solid rgba(28,43,58,0.15);
+  background:rgba(255,255,255,0.35);
+}
+.hokudai-answer-review summary{
+  cursor:pointer;
+  font-size:13px;
+  font-weight:800;
+  color:var(--ink);
+}
+.hokudai-answer-row{
+  margin-top:10px;
+  padding-top:10px;
+  border-top:1px dashed rgba(28,43,58,0.18);
+  color:var(--ink-soft);
+  font-size:12.5px;
+  line-height:1.6;
+}
+.hokudai-answer-row strong{
+  color:var(--ink);
+}
+.hokudai-answer-row.correct strong::after{
+  content:" 正解";
+  color:var(--moss-deep);
+  font-size:11px;
+}
+.hokudai-answer-row.wrong strong::after{
+  content:" 要確認";
+  color:var(--clay);
+  font-size:11px;
+}
+.hokudai-answer-row p{
+  margin:5px 0 0;
+}
+@media(max-width:680px){
+  .hokudai-entry{
+    align-items:stretch;
+    flex-direction:column;
+  }
+  .hokudai-unit-grid,
+  .hokudai-result-layout{
+    grid-template-columns:1fr;
+  }
+}
+
 /* ---------- FILE UPLOAD ---------- */
 .upload-zone{
   border:1.6px dashed rgba(28,43,58,0.35);
