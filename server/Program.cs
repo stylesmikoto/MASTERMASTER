@@ -1,5 +1,7 @@
+using System.Net;
 using System.Net.Http.Headers;
 using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
 using Microsoft.Extensions.FileProviders;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -47,11 +49,13 @@ static async Task<IResult> CallGemini(
         return Results.Json(new { error = keyError }, statusCode: StatusCodes.Status400BadRequest);
     }
 
+    var referenceText = await FetchReferenceTextAsync(httpClientFactory, cancellationToken);
+
     JsonObject geminiBody;
     IReadOnlyList<string> models;
     try
     {
-        (models, geminiBody) = ConvertRoadmapRequestToGemini(body);
+        (models, geminiBody) = ConvertRoadmapRequestToGemini(body, referenceText);
     }
     catch (Exception ex)
     {
@@ -114,7 +118,9 @@ static string? ValidateGeminiApiKey(string apiKey)
     return null;
 }
 
-static (IReadOnlyList<string> models, JsonObject request) ConvertRoadmapRequestToGemini(string body)
+const string ReferenceUrl = "https://abigworld1.github.io/grad_exam.html";
+
+static (IReadOnlyList<string> models, JsonObject request) ConvertRoadmapRequestToGemini(string body, string? referenceText)
 {
     var source = JsonNode.Parse(body)?.AsObject()
         ?? throw new InvalidOperationException("request body is not JSON");
@@ -142,16 +148,25 @@ static (IReadOnlyList<string> models, JsonObject request) ConvertRoadmapRequestT
         }
     };
 
+    var systemParts = new JsonArray();
+
     var system = source["system"]?.GetValue<string>();
     if (!string.IsNullOrWhiteSpace(system))
     {
-        request["systemInstruction"] = new JsonObject
+        systemParts.Add(new JsonObject { ["text"] = system });
+    }
+
+    if (!string.IsNullOrWhiteSpace(referenceText))
+    {
+        systemParts.Add(new JsonObject
         {
-            ["parts"] = new JsonArray
-            {
-                new JsonObject { ["text"] = system }
-            }
-        };
+            ["text"] = $"【必ず参照すべき外部資料 ({ReferenceUrl}) の内容】\n{referenceText}"
+        });
+    }
+
+    if (systemParts.Count > 0)
+    {
+        request["systemInstruction"] = new JsonObject { ["parts"] = systemParts };
     }
 
     var generationConfig = new JsonObject
@@ -234,6 +249,33 @@ static bool TryReadInt(JsonObject source, string name, out int value)
 {
     value = 0;
     return source[name] is JsonValue node && node.TryGetValue<int>(out value);
+}
+
+static async Task<string?> FetchReferenceTextAsync(IHttpClientFactory httpClientFactory, CancellationToken cancellationToken)
+{
+    try
+    {
+        var client = httpClientFactory.CreateClient();
+        client.Timeout = TimeSpan.FromSeconds(8);
+        var html = await client.GetStringAsync(ReferenceUrl, cancellationToken);
+        var text = StripHtml(html);
+        const int maxLength = 20000;
+        return text.Length > maxLength ? text[..maxLength] : text;
+    }
+    catch
+    {
+        // 参照ページが取得できなくても本来のロードマップ生成は継続する
+        return null;
+    }
+}
+
+static string StripHtml(string html)
+{
+    var noScripts = Regex.Replace(html, "<script[^>]*>[\\s\\S]*?</script>", " ", RegexOptions.IgnoreCase);
+    var noStyles = Regex.Replace(noScripts, "<style[^>]*>[\\s\\S]*?</style>", " ", RegexOptions.IgnoreCase);
+    var noTags = Regex.Replace(noStyles, "<[^>]+>", " ");
+    var decoded = WebUtility.HtmlDecode(noTags);
+    return Regex.Replace(decoded, "\\s+", " ").Trim();
 }
 
 static string ExtractGeminiText(string responseBody)
