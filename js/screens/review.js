@@ -112,7 +112,8 @@ function getSubjectColor(subject){
     ['確率・統計', 'linear-gradient(90deg, #be185d, #ec4899)'],
     ['人工知能', 'linear-gradient(90deg, #15803d, #22c55e)'],
     ['コンピュータシステム', 'linear-gradient(90deg, #1d4ed8, #60a5fa)'],
-    ['応用数学', 'linear-gradient(90deg, #7f1d1d, #dc2626)']
+    ['応用数学', 'linear-gradient(90deg, #7f1d1d, #dc2626)'],
+    ['その他', 'linear-gradient(90deg, #4b5563, #6b7280)']
   ];
   const match = palette.find(([key]) => name.includes(key));
   return match ? match[1] : 'linear-gradient(90deg, #4b5563, #6b7280)';

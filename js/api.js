@@ -134,6 +134,7 @@ ${TASK_GRANULARITY_RULES}
 - 過去問の傾向・作問者の情報・目標点数があれば優先順位に反映する
 - 苦手科目や使える時間などの自由記述があれば配分に反映する
 - 主要科目ごとに、subjectProgress に 0〜100 の整数で進捗率を付け、必要に応じて note で簡潔な状態を説明する
+- どの科目にも当てはまらないタスクは、subject を「その他」にして分類する
 - 最後のフェーズは試験直前期（総仕上げ・過去問演習・体調管理など）にする
 - 添付資料（過去問PDF等）があれば内容を精読し、タスクに具体的に反映する`;
 
@@ -176,7 +177,8 @@ ${TASK_GRANULARITY_RULES}
 - フェーズの期間は今日〜試験日で再割り当てする
 - 過度に非現実的なペースを課さない
 - 新規・継続を問わず、未完了タスクはすべて上記の「タスクの粒度」を満たすよう必要に応じて分割・具体化する
-- subjectProgress も現状の学習状態に合わせて更新する`;
+- subjectProgress も現状の学習状態に合わせて更新する
+- どの科目にも当てはまらないタスクは「その他」にまとめる`;
 
 // -------- 添付ファイルをmessages contentに変換 --------
 
@@ -446,6 +448,15 @@ async function callAiAndParse(body){
   try {
     return normalizeParsedResponse(JSON.parse(raw));
   } catch(e){
+    const repaired = tryRepairJsonText(raw);
+    if(repaired){
+      try {
+        return normalizeParsedResponse(JSON.parse(repaired));
+      } catch(_){
+        // 次の候補を試す
+      }
+    }
+
     const candidates = extractJsonCandidates(raw);
     for(const candidate of candidates){
       try {
@@ -454,6 +465,16 @@ async function callAiAndParse(body){
         // 次の候補を試す
       }
     }
+
+    try {
+      const corrected = await repairJsonWithModel(raw);
+      if(corrected){
+        return normalizeParsedResponse(corrected);
+      }
+    } catch(_){
+      // 追加の修復も失敗した場合はそのまま下へ
+    }
+
     throw new Error('応答の解析に失敗しました。AIの返答がJSON形式ではありませんでした: ' + raw.slice(0, 160));
   }
 }
@@ -497,6 +518,43 @@ function cleanJsonLikeText(text){
     .trim()
     .replace(/^json\s*/i, '')
     .trim();
+}
+
+function tryRepairJsonText(text){
+  const candidate = String(text || '')
+    .trim()
+    .replace(/,\s*([}\]])/g, '$1');
+
+  const openBrace = (candidate.match(/\{/g) || []).length;
+  const closeBrace = (candidate.match(/}/g) || []).length;
+  const openBracket = (candidate.match(/\[/g) || []).length;
+  const closeBracket = (candidate.match(/]/g) || []).length;
+
+  let repaired = candidate;
+  if(openBrace > closeBrace) repaired += '}'.repeat(openBrace - closeBrace);
+  if(openBracket > closeBracket) repaired += ']'.repeat(openBracket - closeBracket);
+
+  return repaired.trim() && repaired !== candidate ? repaired : null;
+}
+
+async function repairJsonWithModel(rawText){
+  const repairBody = {
+    model: GEMINI_MODEL,
+    max_tokens: 2500,
+    system: 'あなたは JSON 修復エージェントです。与えられた不正な JSON を、元の意図を保ったまま正しい JSON のみで返してください。前置きや説明は絶対に不要です。',
+    messages: [{ role: 'user', content: `以下の応答は JSON として不正です。元の意図を保ちつつ、正しい JSON のみを返してください。\n\n${rawText}` }],
+    tools: []
+  };
+
+  const repairedText = await callAiText(repairBody);
+  const cleaned = cleanJsonLikeText(repairedText);
+  if(!cleaned) return null;
+
+  try {
+    return JSON.parse(cleaned);
+  } catch(_){
+    return null;
+  }
 }
 
 function extractJsonCandidates(text){
@@ -560,9 +618,11 @@ function normalizeTask(task, phaseIdx, taskIdx){
 }
 
 function normalizeTaskSubject(task){
-  if(!task || typeof task === 'string') return '';
+  if(!task || typeof task === 'string') return 'その他';
   const raw = String(task?.subject || task?.subjectName || '').trim();
-  return raw;
+  if(raw) return raw;
+  const inferred = inferSubjectFromText(String(task?.text || ''));
+  return inferred || 'その他';
 }
 
 function normalizeSubjectProgress(subjectProgress, phases){
@@ -630,5 +690,5 @@ function inferSubjectFromText(text){
   for(const [subject, pattern] of patterns){
     if(pattern.test(source)) return subject;
   }
-  return '';
+  return 'その他';
 }

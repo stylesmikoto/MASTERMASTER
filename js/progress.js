@@ -58,17 +58,17 @@ const SUBJECT_PATTERNS = [
 
 function inferSubjectFromText(text){
   const normalized = String(text || '').trim();
-  if(!normalized) return '';
+  if(!normalized) return 'その他';
   for(const [subject, pattern] of SUBJECT_PATTERNS){
     if(pattern.test(normalized)) return subject;
   }
-  return '';
+  return 'その他';
 }
 
 export function computeSubjectProgress(rm){
   const stats = new Map();
   const add = (subject, done) => {
-    if(!subject) return;
+    if(!subject || subject === 'その他') return;
     const current = stats.get(subject) || { subject, total: 0, done: 0 };
     current.total += 1;
     if(done) current.done += 1;
@@ -78,7 +78,7 @@ export function computeSubjectProgress(rm){
   (rm?.phases || []).forEach(phase => {
     (phase.tasks || []).forEach(task => {
       const subject = String(task?.subject || '').trim() || inferSubjectFromText(task?.text || task);
-      add(subject, Boolean(task?.done));
+      add(subject || 'その他', Boolean(task?.done));
     });
   });
 
