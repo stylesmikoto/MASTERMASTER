@@ -75,12 +75,12 @@ export function renderHokudaiDiagnosticTestScreen(app, state, actions){
       <div class="brandbar">${PEAK_SVG}<span>北大 情報理工学コース診断</span></div>
       <div class="review-screen">
         <div class="hokudai-stepbar">
-          <span>1 単元選択</span>
+          <span>1 トップ画面で選択</span>
           <span class="active">2 診断テスト</span>
           <span>3 結果</span>
         </div>
         <div class="review-h">${esc(test.title)}</div>
-        <div class="review-sub">${answeredCount} / ${test.totalQuestions} 問回答済み。APIは使わず、この画面内で採点します。</div>
+        <div class="review-sub">トップ画面で選んだ単元から出題しています。${answeredCount} / ${test.totalQuestions} 問回答済み。APIは使わず、この画面内で採点します。</div>
 
         <div class="hokudai-question-list">
           ${test.questions.map((question, index) => renderQuestion(question, index, answers[question.id])).join('')}
@@ -90,7 +90,7 @@ export function renderHokudaiDiagnosticTestScreen(app, state, actions){
 
         <div class="review-actions">
           <button class="btn-primary-light" id="btn-score-hokudai-test">採点して結果を見る</button>
-          <button class="btn-secondary-light" id="btn-back-units">単元選択に戻る</button>
+          <button class="btn-secondary-light" id="btn-back-units">トップ画面に戻る</button>
         </div>
       </div>
     </div>
@@ -122,7 +122,7 @@ export function renderHokudaiDiagnosticResult(app, state, actions){
       <div class="brandbar">${PEAK_SVG}<span>北大 情報理工学コース診断</span></div>
       <div class="review-screen">
         <div class="hokudai-stepbar">
-          <span>1 単元選択</span>
+          <span>1 トップ画面で選択</span>
           <span>2 診断テスト</span>
           <span class="active">3 結果</span>
         </div>
@@ -210,7 +210,21 @@ export function buildHokudaiDiagnosticFormPatch(hokudaiState, currentForm){
     focusLines
   ].join('\n');
 
-  const presetSubjects = '専門科目1（基礎数学・情報数学を含む3問選択）/ 専門科目2 / 英語スコア提出 / 口述試験';
+  const selectedUnits = new Set(summary.unitIds);
+  const subject1Elective = selectedUnits.has('information_theory') ? '情報理論' : '確率・統計';
+  const subject2 = [
+    ['algorithms_data_structures', 'アルゴリズムとデータ構造'],
+    ['ai_machine_learning', '人工知能'],
+    ['computer_systems', 'コンピュータシステム'],
+    ['applied_math', '応用数学']
+  ].filter(([unitId]) => selectedUnits.has(unitId)).map(([, label]) => label);
+
+  const presetSubjects = [
+    `専門科目1: 基礎数学・情報数学・${subject1Elective}`,
+    `専門科目2: ${subject2.join('・') || '未選択'}`,
+    '英語スコア提出',
+    '口述試験'
+  ].join(' / ');
   const pastExam = summary.sources.join('\n');
   const priorNote = currentForm.freeNote ? `${currentForm.freeNote}\n\n` : '';
   const priorCustom = currentForm.customInstructions ? `${currentForm.customInstructions}\n\n` : '';
@@ -218,6 +232,8 @@ export function buildHokudaiDiagnosticFormPatch(hokudaiState, currentForm){
   return {
     university: '北海道大学大学院情報科学院 情報科学専攻 情報理工学コース',
     subjects: presetSubjects,
+    subject1Elective,
+    subject2,
     pastExam,
     freeNote: `${priorNote}${diagnosticNote}`,
     customInstructions: `${priorCustom}北大情報理工学コース向けに、上記の診断結果で低かった単元を優先して学習ロードマップへ反映してください。`

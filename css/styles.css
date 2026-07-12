@@ -147,6 +147,7 @@ h1,h2,h3{ font-family:"Shippori Mincho", serif; margin:0; }
 
 /* ---------- HOKUDAI DIAGNOSTIC ---------- */
 .hokudai-entry{
+  margin-top:14px;
   margin-bottom:22px;
   padding:16px;
   border:1px solid rgba(79,105,66,0.32);

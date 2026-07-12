@@ -39,11 +39,9 @@ export const HOKUDAI_UNIT_GROUPS = Object.freeze([
     description: '情報理工学コースの専門科目2対策として確認する専門系単元。',
     unitIds: [
       'algorithms_data_structures',
+      'ai_machine_learning',
       'computer_systems',
-      'operating_systems',
-      'databases',
-      'programming_languages',
-      'ai_machine_learning'
+      'applied_math'
     ],
     minSelect: 0
   }
@@ -109,6 +107,16 @@ export const HOKUDAI_EXAM_UNITS = Object.freeze([
     required: false,
     keywords: ['CPU', 'メモリ階層', 'キャッシュ', 'パイプライン', '2進表現'],
     description: '計算機アーキテクチャ、メモリ階層、命令実行の基礎を確認する。'
+  },
+  {
+    id: 'applied_math',
+    label: '応用数学',
+    shortLabel: '応用数学',
+    groupId: 'subject2_topics',
+    sourceId: 'csit02_2025',
+    required: false,
+    keywords: ['微分方程式', 'フーリエ変換', 'ラプラス変換', '数値計算', '固有値問題'],
+    description: '微分方程式、変換、数値計算、線形代数の応用を中心に確認する。'
   },
   {
     id: 'operating_systems',

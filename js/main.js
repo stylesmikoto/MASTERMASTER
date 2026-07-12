@@ -23,6 +23,7 @@ import { renderRoadmap } from './screens/roadmap.js';
 import { renderReview } from './screens/review.js';
 import {
   getRequiredHokudaiUnitIds,
+  normalizeHokudaiUnitSelection,
   validateHokudaiUnitSelection
 } from './features/hokudaiUnits.js';
 import { scoreHokudaiDiagnosticTest } from './features/hokudaiDiagnosticTest.js';
@@ -111,6 +112,27 @@ function readFormValues(){
   if(customEl) state.form.customInstructions = customEl.value.trim();
 }
 
+function getHokudaiUnitIdsFromForm(){
+  const subject1Map = {
+    '確率・統計': 'probability_statistics',
+    '情報理論': 'information_theory'
+  };
+  const subject2Map = {
+    'アルゴリズムとデータ構造': 'algorithms_data_structures',
+    '人工知能': 'ai_machine_learning',
+    'コンピュータシステム': 'computer_systems',
+    '応用数学': 'applied_math'
+  };
+
+  const selected = [
+    ...getRequiredHokudaiUnitIds(),
+    subject1Map[state.form.subject1Elective],
+    ...(state.form.subject2 || []).map(subject => subject2Map[subject])
+  ].filter(Boolean);
+
+  return normalizeHokudaiUnitSelection(selected);
+}
+
 // 完了状態を保持したまま新しいロードマップにマージ
 function mergeDoneState(newRoadmap, oldRoadmap){
   if(!oldRoadmap) return newRoadmap;
@@ -128,8 +150,33 @@ function mergeDoneState(newRoadmap, oldRoadmap){
 const formActions = {
   rerender: render,
   onStartHokudaiDiagnostic: () => {
+    readFormValues();
+    if(!state.form.subject1Elective){
+      state.error = '専門科目1の選択科目を1つ選んでから診断を始めてください。';
+      render();
+      return;
+    }
+    if((state.form.subject2 || []).length !== 2){
+      state.error = '専門科目2を2つ選んでから診断を始めてください。';
+      render();
+      return;
+    }
+
+    const selectedUnitIds = getHokudaiUnitIdsFromForm();
+    const validation = validateHokudaiUnitSelection(selectedUnitIds);
+    if(!validation.ok){
+      state.error = validation.errors.join(' / ');
+      render();
+      return;
+    }
+
+    state.hokudai = {
+      ...state.hokudai,
+      ...createHokudaiDiagnosticState(validation.selectedUnitIds),
+      selectedUnitIds: validation.selectedUnitIds
+    };
     state.error = null;
-    state.screen = 'hokudaiUnits';
+    state.screen = 'hokudaiTest';
     render();
   },
   onSubmit: async () => {
@@ -246,7 +293,7 @@ const hokudaiActions = {
     render();
   },
   onBackToUnits: () => {
-    state.screen = 'hokudaiUnits';
+    state.screen = 'form';
     state.error = null;
     render();
   },
@@ -294,6 +341,7 @@ const roadmapActions = {
     state.editMode = false;
     state.form = {
       university: '', target: '', examDate: '', subjects: '',
+      subject1Elective: '', subject2: [],
       pastExam: '', examiner: '', freeNote: '',
       customInstructions: '', attachments: []
     };

@@ -251,6 +251,47 @@ export const HOKUDAI_DIAGNOSTIC_QUESTIONS = Object.freeze({
       explanation: '複数命令の処理段階を重ねることで単位時間あたりの処理数を増やします。'
     }
   ],
+  applied_math: [
+    {
+      id: 'applied_math_1',
+      skill: 'differential_equation',
+      prompt: '微分方程式 dy/dx = ay の一般解として正しいものはどれですか。ただしaは定数です。',
+      options: [
+        { id: 'a', text: 'y = Ce^{ax}' },
+        { id: 'b', text: 'y = ax + C' },
+        { id: 'c', text: 'y = C sin(ax)' },
+        { id: 'd', text: 'y = a / x' }
+      ],
+      answer: 'a',
+      explanation: 'dy/dx = ay は変数分離により y = Ce^{ax} が一般解です。'
+    },
+    {
+      id: 'applied_math_2',
+      skill: 'fourier',
+      prompt: 'フーリエ変換を使う主な目的として最も適切なものはどれですか。',
+      options: [
+        { id: 'a', text: '時間・空間領域の信号を周波数成分に分解する' },
+        { id: 'b', text: '任意の行列を必ず対角行列にする' },
+        { id: 'c', text: '確率変数を必ず正規分布にする' },
+        { id: 'd', text: 'データベースの表を正規化する' }
+      ],
+      answer: 'a',
+      explanation: 'フーリエ変換は関数や信号を周波数成分として解析する道具です。'
+    },
+    {
+      id: 'applied_math_3',
+      skill: 'numerical_method',
+      prompt: 'ニュートン法で非線形方程式 f(x)=0 の近似解を求める更新式として正しいものはどれですか。',
+      options: [
+        { id: 'a', text: "x_{n+1} = x_n - f(x_n) / f'(x_n)" },
+        { id: 'b', text: "x_{n+1} = x_n + f'(x_n) / f(x_n)" },
+        { id: 'c', text: "x_{n+1} = f(x_n) + f'(x_n)" },
+        { id: 'd', text: 'x_{n+1} = x_n^2' }
+      ],
+      answer: 'a',
+      explanation: "ニュートン法は接線による近似から x_{n+1}=x_n-f(x_n)/f'(x_n) と更新します。"
+    }
+  ],
   operating_systems: [
     {
       id: 'operating_systems_1',

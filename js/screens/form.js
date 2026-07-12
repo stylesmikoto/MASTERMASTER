@@ -22,16 +22,6 @@ export function renderForm(app, state, actions){
             : '北海道大学 大学院情報科学研究院 情報理工学コースの院試に特化したロードマップを作成します。<br>選択予定の科目と、今のあなたの状態を教えてください。'}</div>
         </div>
         <div class="permit-body">
-          ${!isEditing ? `
-            <div class="hokudai-entry">
-              <div>
-                <div class="hokudai-entry-title">単元別診断テスト</div>
-                <div class="hokudai-entry-sub">受験単元を選び、各単元3問の診断テストで習熟度を確認できます。結果はロードマップ入力に反映できます。</div>
-              </div>
-              <button class="btn-primary-light" id="btn-hokudai-diagnostic">診断を始める</button>
-            </div>
-          ` : ''}
-
           <div class="row2">
             <div class="field">
               <label>目標点数・順位 <span class="opt">任意</span></label>
@@ -66,6 +56,15 @@ export function renderForm(app, state, actions){
                 </label>
               `).join('')}
             </div>
+            ${!isEditing ? `
+              <div class="hokudai-entry">
+                <div>
+                  <div class="hokudai-entry-title">単元別診断テスト</div>
+                  <div class="hokudai-entry-sub">上で選んだ専門科目1・2の単元から、各単元3問の診断テストを開始します。</div>
+                </div>
+                <button class="btn-primary-light" id="btn-hokudai-diagnostic">選択単元で診断</button>
+              </div>
+            ` : ''}
           </div>
 
           <div class="field">
