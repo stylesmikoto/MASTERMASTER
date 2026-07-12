@@ -5,12 +5,33 @@ import { todayStr } from './utils.js';
 
 const API_URL = '/api/gemini';
 
+const HOKUDAI_EXAM_REFERENCE = `
+【対象】北海道大学大学院情報科学院修士課程入学試験（情報理工学コース）
+【方針】このプロンプトでは他大学を一切考慮しない。北大の公開情報だけを前提に、試験範囲・傾向・選択科目・学習順序を決める。
+
+【公開ページから反映する要点】
+- 試験は専門科目1と専門科目2で構成される
+- 専門科目1は基礎数学、情報数学、確率・統計、情報理論の4問のうち、基礎数学と情報数学を含む3問を解答する
+- 専門科目2はアルゴリズムとデータ構造、人工知能、コンピュータシステム、応用数学の4問のうち2問を選択して解答する
+- 専門科目1と専門科目2はいずれも試験時間2時間である
+- 選択科目の難易度差があるため、科目選択は事前に吟味する必要がある
+- 10年分の過去問を解く価値が高く、2013年以前は最近の問題と大きく異なるため優先度が低い
+- 2023年のコンピュータシステムと2015年のコンピュータ基礎工学、2022年の情報数学と2014年の情報数学のように、大問単位で類似や使い回しがある
+- 基礎数学では、行列、固有値分解、線形部分空間、基底、集合の証明、停留点、極座標変換、マクローリン展開、逆三角関数、双曲線関数が重点として整理されている
+- 情報数学では、正規言語、文脈自由言語、文脈依存文法、ポンピング定理、命題論理、述語論理、距離関数、同値関係が重点として整理されている
+- 確率・統計では、一致性、不偏性、期待値、分散、共分散、独立と無相関、各種分布が重点として整理されている
+- 情報理論では、エントロピー、相互情報量、条件付きエントロピー、通信路容量、(7,4)ハミング符号、巡回符号、正規マルコフ情報源のエントロピーが重点として整理されている
+- アルゴリズムとデータ構造では、計算量、隣接リスト、全域木、グラフの種類、ユークリッドの互除法が重点として整理されている
+- 人工知能では、Q学習とニューラルネットワークが重点として整理されている
+- コンピュータシステムでは、補数表現、固定小数点方式と浮動小数点方式、キャッシュメモリ、IPアドレス、OSスケジューラ、ページング方式、C言語、ノイマン型コンピュータ、OSI参照モデル、DNSが重点として整理されている
+- 選択科目は、難易度だけでなく、自分の研究関心と時間配分を踏まえて決める
+`.trim();
+
 // -------- プロンプト生成 --------
 
 function buildUserContent(f){
   const base = `
 【今日の日付】${todayStr()}
-【志望大学院・専攻】${f.university}
 【目標点数・順位】${f.target || '未記入'}
 【試験日】${f.examDate}
 【試験科目・形式】${f.subjects || '未記入'}
@@ -19,13 +40,19 @@ function buildUserContent(f){
 【自由記述】${f.freeNote || '未記入'}
 `.trim();
 
+  const reference = HOKUDAI_EXAM_REFERENCE;
+
   if(f.customInstructions && f.customInstructions.trim()){
     return `${base}
+
+${reference}
 
 【ユーザからの追加指示 — これを最優先で反映してください】
 ${f.customInstructions.trim()}`;
   }
-  return base;
+  return `${base}
+
+${reference}`;
 }
 
 // 新規作成用のシステムプロンプト。Web検索の使用を明示的に指示。
@@ -163,12 +190,12 @@ export async function generateRoadmap(form){
 // -------- Web情報の再検証 (既存Webサイト・情報の確認) --------
 
 export async function verifyInformation(rm){
-  const target = rm.university;
-  const userContent = `以下の大学院入試について、最新の公式情報を確認してください。web_searchツールを2〜3回使い、以下を調査してください:
-- 志望大学院・専攻: ${target}
+  const userContent = `北海道大学大学院情報科学院修士課程入学試験（情報理工学コース）について、最新の公式情報を確認してください。web_searchを使い、以下を調査してください:
 - 記録されている試験日: ${rm.examDate}
 - 記録されている試験科目: ${rm.originalInputs?.subjects || '未記入'}
 - 記録されている研究室情報: ${rm.originalInputs?.examiner || '未記入'}
+
+${HOKUDAI_EXAM_REFERENCE}
 
 各項目について、現時点の公式情報と一致しているか、または更新があるかを確認してください。
 
@@ -199,7 +226,7 @@ export async function verifyInformation(rm){
 export async function adjustRoadmap(roadmap, diagnosis){
   // 既存タスク状態を含めて渡す
   const context = {
-    university: roadmap.university,
+    university: '北海道大学大学院情報科学院修士課程入学試験（情報理工学コース）',
     target: roadmap.target,
     examDate: roadmap.examDate,
     today: todayStr(),
@@ -214,7 +241,9 @@ export async function adjustRoadmap(roadmap, diagnosis){
     }))
   };
 
-  const userContent = `以下のJSONは現在のロードマップと進捗です。残り期間で無理なく合格ラインに到達できるよう調整してください。
+  const userContent = `以下のJSONは北海道大学大学院情報科学院修士課程入学試験（情報理工学コース）の現在のロードマップと進捗です。残り期間で無理なく合格ラインに到達できるよう調整してください。
+
+${HOKUDAI_EXAM_REFERENCE}
 
 ${JSON.stringify(context, null, 2)}`;
 
